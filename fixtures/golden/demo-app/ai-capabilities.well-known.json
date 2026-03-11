@@ -1,0 +1,124 @@
+{
+  "manifestVersion": "1.0.0",
+  "generatedAt": "2026-03-11T12:34:26.260Z",
+  "app": {
+    "name": "Fixture App",
+    "version": "0.0.1",
+    "description": "Fixture manifest",
+    "baseUrl": "http://localhost:3000"
+  },
+  "discovery": {
+    "mode": "public",
+    "executionEndpoint": {
+      "method": "POST",
+      "path": "/execute"
+    },
+    "capabilitiesEndpoint": {
+      "method": "GET",
+      "path": "/capabilities"
+    }
+  },
+  "policy": {
+    "defaultVisibility": "internal",
+    "defaultRiskLevel": "medium",
+    "defaultConfirmationPolicy": "none",
+    "confirmationSupported": false
+  },
+  "interaction": {
+    "toolCalling": true,
+    "httpExecution": true,
+    "streaming": false
+  },
+  "capabilities": [
+    {
+      "id": "api.orders.list-orders",
+      "kind": "read",
+      "displayTitle": "List orders",
+      "description": "Retrieve a paginated list of orders for the current user.",
+      "inputSchema": {
+        "properties": {
+          "limit": {
+            "default": 20,
+            "type": "integer"
+          },
+          "page": {
+            "default": 1,
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "cancelled",
+              "delivered",
+              "pending",
+              "shipped"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "items": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "public",
+        "riskLevel": "low",
+        "confirmationPolicy": "none",
+        "permissionScope": [
+          "orders:read"
+        ]
+      },
+      "execution": {
+        "mode": "http",
+        "endpoint": {
+          "method": "POST",
+          "path": "/execute"
+        }
+      }
+    },
+    {
+      "id": "api.users.update-profile",
+      "kind": "mutation",
+      "displayTitle": "Update user profile",
+      "description": "Update user profile",
+      "inputSchema": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "public",
+        "riskLevel": "medium",
+        "confirmationPolicy": "once",
+        "permissionScope": [
+          "users:write"
+        ]
+      },
+      "execution": {
+        "mode": "http",
+        "endpoint": {
+          "method": "POST",
+          "path": "/execute"
+        }
+      }
+    }
+  ]
+}

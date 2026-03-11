@@ -1,0 +1,7 @@
+node_modules/
+dist/
+output/*.json
+output/*.jsonl
+*.tsbuildinfo
+.env
+.env.*

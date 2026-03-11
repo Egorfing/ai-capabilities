@@ -1,0 +1,128 @@
+{
+  "manifestVersion": "1.0.0",
+  "generatedAt": "2026-03-11T14:01:02.097Z",
+  "app": {
+    "name": "Fixture App",
+    "version": "0.0.1",
+    "description": "Fixture manifest",
+    "baseUrl": "http://localhost:3000"
+  },
+  "defaults": {
+    "visibility": "internal",
+    "riskLevel": "medium",
+    "confirmationPolicy": "none"
+  },
+  "capabilities": [
+    {
+      "id": "api.orders.list-orders",
+      "kind": "read",
+      "displayTitle": "List orders",
+      "description": "Retrieve a paginated list of orders for the current user.",
+      "inputSchema": {
+        "properties": {
+          "limit": {
+            "default": 20,
+            "type": "integer"
+          },
+          "page": {
+            "default": 1,
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "cancelled",
+              "delivered",
+              "pending",
+              "shipped"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "items": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "public",
+        "riskLevel": "low",
+        "confirmationPolicy": "none",
+        "permissionScope": [
+          "orders:read"
+        ]
+      },
+      "effects": [
+        {
+          "type": "network-request"
+        }
+      ],
+      "tags": [
+        "orders",
+        "public"
+      ],
+      "sources": [
+        {
+          "type": "openapi"
+        }
+      ]
+    },
+    {
+      "id": "api.users.update-profile",
+      "kind": "mutation",
+      "displayTitle": "Update user profile",
+      "description": "Update user profile",
+      "inputSchema": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "public",
+        "riskLevel": "medium",
+        "confirmationPolicy": "once",
+        "permissionScope": [
+          "users:write"
+        ]
+      },
+      "effects": [
+        {
+          "type": "network-request"
+        },
+        {
+          "type": "state-mutation"
+        }
+      ],
+      "tags": [
+        "users",
+        "react-query",
+        "mutation"
+      ],
+      "sources": [
+        {
+          "type": "openapi"
+        },
+        {
+          "type": "react-query"
+        }
+      ]
+    }
+  ]
+}

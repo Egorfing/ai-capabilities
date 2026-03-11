@@ -1,0 +1,24 @@
+{
+  "name": "@ai-capabilities/extract",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Extraction pipeline components for AI Capabilities.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "license": "Apache-2.0",
+  "keywords": [
+    "ai",
+    "capabilities",
+    "extraction"
+  ],
+  "files": [
+    "dist/**/*"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  }
+}

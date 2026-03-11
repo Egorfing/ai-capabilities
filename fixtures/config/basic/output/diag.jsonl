@@ -1,0 +1,6 @@
+{"level":"info","stage":"extraction","sourceType":"openapi","message":"Extracted 7 capabilities from /Users/MAC/Documents/real-ai-assistant-for-your-website/fixtures/demo-app/openapi.json","filePath":"/Users/MAC/Documents/real-ai-assistant-for-your-website/fixtures/demo-app/openapi.json","details":{"count":7}}
+{"level":"info","stage":"extraction","sourceType":"react-query","message":"Scanned 5 files (from 5 discovered), found 8 React Query hooks.","details":{"scanned":5,"discovered":5,"capabilities":8}}
+{"level":"info","stage":"extraction","sourceType":"router","message":"Extracted 5 routes from src/router/routes.tsx","filePath":"src/router/routes.tsx","details":{"count":5}}
+{"level":"info","stage":"extraction","sourceType":"router","message":"Scanned 5 files, found 5 routes","details":{"scanned":5,"filesWithRoutes":1,"routes":5}}
+{"level":"info","stage":"extraction","sourceType":"form","message":"Extracted 1 schemas from src/forms/createOrder.ts","filePath":"src/forms/createOrder.ts","details":{"count":1}}
+{"level":"info","stage":"extraction","sourceType":"form","message":"Scanned 5 files, found 1 form schemas","details":{"scanned":5,"filesWithSchemas":1,"schemas":1}}

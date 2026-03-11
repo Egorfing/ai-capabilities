@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://capability-engine/schemas/enriched-manifest.json",
+  "title": "EnrichedCapabilityManifest",
+  "description": "Output of the enrichment pipeline — capabilities with LLM-generated semantic metadata.",
+  "type": "object",
+  "required": ["meta", "capabilities"],
+  "additionalProperties": false,
+  "properties": {
+    "meta": { "$ref": "#/definitions/ManifestMeta" },
+    "capabilities": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/EnrichedCapability" }
+    }
+  },
+  "definitions": {
+    "ManifestMeta": {
+      "type": "object",
+      "required": ["generatedAt", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "sourceProject": { "type": "string" },
+        "extractors": { "type": "array", "items": { "type": "string" } },
+        "version": { "type": "string" }
+      }
+    },
+    "SourceType": {
+      "type": "string",
+      "enum": ["openapi", "react-query", "router", "form", "manual", "custom"]
+    },
+    "CapabilityKind": {
+      "type": "string",
+      "enum": ["read", "mutation", "navigation", "ui-action", "workflow"]
+    },
+    "CapabilityEffect": {
+      "type": "string",
+      "enum": ["network-request", "state-mutation", "navigation", "notification", "file-operation", "external-service"]
+    },
+    "RiskLevel": {
+      "type": "string",
+      "enum": ["safe", "low", "medium", "high", "critical"]
+    },
+    "ConfirmationPolicy": {
+      "type": "string",
+      "enum": ["none", "once", "always"]
+    },
+    "Visibility": {
+      "type": "string",
+      "enum": ["public", "internal", "hidden"]
+    },
+    "CapabilitySource": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "$ref": "#/definitions/SourceType" },
+        "filePath": { "type": "string" },
+        "location": { "type": "string" }
+      }
+    },
+    "EnrichedCapability": {
+      "type": "object",
+      "required": [
+        "id", "source", "kind", "inputSchema", "metadata",
+        "displayTitle", "userDescription", "aliases", "exampleIntents",
+        "confirmationPolicy", "riskLevel", "visibility"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]*$" },
+        "source": { "$ref": "#/definitions/CapabilitySource" },
+        "kind": { "$ref": "#/definitions/CapabilityKind" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "inputSchema": { "type": "object" },
+        "outputSchema": { "type": "object" },
+        "effects": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/CapabilityEffect" }
+        },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "permissions": { "type": "array", "items": { "type": "string" } },
+        "metadata": { "type": "object" },
+        "displayTitle": { "type": "string" },
+        "userDescription": { "type": "string" },
+        "aliases": { "type": "array", "items": { "type": "string" } },
+        "exampleIntents": { "type": "array", "items": { "type": "string" } },
+        "confirmationPolicy": { "$ref": "#/definitions/ConfirmationPolicy" },
+        "riskLevel": { "$ref": "#/definitions/RiskLevel" },
+        "visibility": { "$ref": "#/definitions/Visibility" }
+      }
+    }
+  }
+}

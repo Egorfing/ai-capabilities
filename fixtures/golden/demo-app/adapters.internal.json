@@ -1,0 +1,251 @@
+[
+  {
+    "id": "api_orders_list_orders",
+    "capabilityId": "api.orders.list-orders",
+    "summary": "List orders — Retrieve a paginated list of orders for the current user. — Risk: low",
+    "schema": {
+      "properties": {
+        "limit": {
+          "default": 20,
+          "type": "integer"
+        },
+        "page": {
+          "default": 1,
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "cancelled",
+            "delivered",
+            "pending",
+            "shipped"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "id": "api_orders_create_order",
+    "capabilityId": "api.orders.create-order",
+    "summary": "Create order — Place a new order. — Risk: medium",
+    "schema": {
+      "properties": {
+        "comment": {
+          "type": "string"
+        },
+        "customerId": {
+          "type": "string"
+        },
+        "items": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "confirmed",
+            "draft"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "customerId",
+        "items",
+        "status"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "id": "api_orders_get_order",
+    "capabilityId": "api.orders.get-order",
+    "summary": "Get order by ID — Get order by ID — Risk: medium",
+    "schema": {
+      "properties": {
+        "orderId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "orderId"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "id": "api_orders_cancel_order",
+    "capabilityId": "api.orders.cancel-order",
+    "summary": "Cancel an order — Cancel a pending order. Cannot cancel shipped orders. — Risk: high",
+    "schema": {
+      "properties": {
+        "orderId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "orderId"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "id": "api_products_list_products",
+    "capabilityId": "api.products.list-products",
+    "summary": "List products — List products — Risk: medium",
+    "schema": {
+      "properties": {
+        "category": {
+          "type": "string"
+        },
+        "q": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "id": "api_users_get_current_user",
+    "capabilityId": "api.users.get-current-user",
+    "summary": "Get current user profile — Get current user profile — Risk: medium",
+    "schema": {
+      "properties": {},
+      "type": "object"
+    }
+  },
+  {
+    "id": "api_users_update_profile",
+    "capabilityId": "api.users.update-profile",
+    "summary": "Update user profile — Update user profile — Risk: medium",
+    "schema": {
+      "properties": {
+        "email": {
+          "format": "email",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "id": "hook_orders",
+    "capabilityId": "hook.orders",
+    "summary": "useOrders — useOrders — Risk: medium",
+    "schema": {
+      "properties": {
+        "filters": {
+          "description": "OrderFilters",
+          "type": "unknown"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "id": "hook_order",
+    "capabilityId": "hook.order",
+    "summary": "useOrder — useOrder — Risk: medium",
+    "schema": {
+      "properties": {
+        "orderId": {
+          "description": "string",
+          "type": "unknown"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "id": "hook_products",
+    "capabilityId": "hook.products",
+    "summary": "useProducts — useProducts — Risk: medium",
+    "schema": {
+      "properties": {
+        "params": {
+          "description": "ProductSearchParams",
+          "type": "unknown"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "id": "hook_product_details",
+    "capabilityId": "hook.product-details",
+    "summary": "useProductDetails — useProductDetails — Risk: medium",
+    "schema": {
+      "properties": {
+        "productId": {
+          "description": "string",
+          "type": "unknown"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "id": "hook_current_user",
+    "capabilityId": "hook.current-user",
+    "summary": "useCurrentUser — useCurrentUser — Risk: medium",
+    "schema": {
+      "properties": {},
+      "type": "object"
+    }
+  },
+  {
+    "id": "navigate_to_root",
+    "capabilityId": "navigate.to.root",
+    "summary": "Navigate to / — Navigate to route / — Risk: medium",
+    "schema": {
+      "properties": {},
+      "type": "object"
+    }
+  },
+  {
+    "id": "navigate_to_orders_order_id",
+    "capabilityId": "navigate.to.orders.order-id",
+    "summary": "Navigate to /orders/:orderId — Navigate to route /orders/:orderId — Risk: medium",
+    "schema": {
+      "properties": {
+        "orderId": {
+          "description": "Route parameter \"orderId\"",
+          "type": "string"
+        }
+      },
+      "required": [
+        "orderId"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "id": "navigate_to_orders_new",
+    "capabilityId": "navigate.to.orders.new",
+    "summary": "Navigate to /orders/new — Navigate to route /orders/new — Risk: medium",
+    "schema": {
+      "properties": {},
+      "type": "object"
+    }
+  },
+  {
+    "id": "navigate_to_products_product_id_details",
+    "capabilityId": "navigate.to.products.product-id.details",
+    "summary": "Navigate to /products/:productId/details — Navigate to route /products/:productId/details — Risk: medium",
+    "schema": {
+      "properties": {
+        "productId": {
+          "description": "Route parameter \"productId\"",
+          "type": "string"
+        }
+      },
+      "required": [
+        "productId"
+      ],
+      "type": "object"
+    }
+  }
+]

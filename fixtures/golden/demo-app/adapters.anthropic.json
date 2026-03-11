@@ -1,0 +1,251 @@
+[
+  {
+    "name": "api_orders_list_orders",
+    "description": "List orders — Retrieve a paginated list of orders for the current user. — Risk: low",
+    "capabilityId": "api.orders.list-orders",
+    "input_schema": {
+      "properties": {
+        "limit": {
+          "default": 20,
+          "type": "integer"
+        },
+        "page": {
+          "default": 1,
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "cancelled",
+            "delivered",
+            "pending",
+            "shipped"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "api_orders_create_order",
+    "description": "Create order — Place a new order. — Risk: medium",
+    "capabilityId": "api.orders.create-order",
+    "input_schema": {
+      "properties": {
+        "comment": {
+          "type": "string"
+        },
+        "customerId": {
+          "type": "string"
+        },
+        "items": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "confirmed",
+            "draft"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "customerId",
+        "items",
+        "status"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "api_orders_get_order",
+    "description": "Get order by ID — Get order by ID — Risk: medium",
+    "capabilityId": "api.orders.get-order",
+    "input_schema": {
+      "properties": {
+        "orderId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "orderId"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "api_orders_cancel_order",
+    "description": "Cancel an order — Cancel a pending order. Cannot cancel shipped orders. — Risk: high",
+    "capabilityId": "api.orders.cancel-order",
+    "input_schema": {
+      "properties": {
+        "orderId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "orderId"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "api_products_list_products",
+    "description": "List products — List products — Risk: medium",
+    "capabilityId": "api.products.list-products",
+    "input_schema": {
+      "properties": {
+        "category": {
+          "type": "string"
+        },
+        "q": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "api_users_get_current_user",
+    "description": "Get current user profile — Get current user profile — Risk: medium",
+    "capabilityId": "api.users.get-current-user",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    }
+  },
+  {
+    "name": "api_users_update_profile",
+    "description": "Update user profile — Update user profile — Risk: medium",
+    "capabilityId": "api.users.update-profile",
+    "input_schema": {
+      "properties": {
+        "email": {
+          "format": "email",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "hook_orders",
+    "description": "useOrders — useOrders — Risk: medium",
+    "capabilityId": "hook.orders",
+    "input_schema": {
+      "properties": {
+        "filters": {
+          "description": "OrderFilters",
+          "type": "unknown"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "hook_order",
+    "description": "useOrder — useOrder — Risk: medium",
+    "capabilityId": "hook.order",
+    "input_schema": {
+      "properties": {
+        "orderId": {
+          "description": "string",
+          "type": "unknown"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "hook_products",
+    "description": "useProducts — useProducts — Risk: medium",
+    "capabilityId": "hook.products",
+    "input_schema": {
+      "properties": {
+        "params": {
+          "description": "ProductSearchParams",
+          "type": "unknown"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "hook_product_details",
+    "description": "useProductDetails — useProductDetails — Risk: medium",
+    "capabilityId": "hook.product-details",
+    "input_schema": {
+      "properties": {
+        "productId": {
+          "description": "string",
+          "type": "unknown"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "hook_current_user",
+    "description": "useCurrentUser — useCurrentUser — Risk: medium",
+    "capabilityId": "hook.current-user",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    }
+  },
+  {
+    "name": "navigate_to_root",
+    "description": "Navigate to / — Navigate to route / — Risk: medium",
+    "capabilityId": "navigate.to.root",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    }
+  },
+  {
+    "name": "navigate_to_orders_order_id",
+    "description": "Navigate to /orders/:orderId — Navigate to route /orders/:orderId — Risk: medium",
+    "capabilityId": "navigate.to.orders.order-id",
+    "input_schema": {
+      "properties": {
+        "orderId": {
+          "description": "Route parameter \"orderId\"",
+          "type": "string"
+        }
+      },
+      "required": [
+        "orderId"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "navigate_to_orders_new",
+    "description": "Navigate to /orders/new — Navigate to route /orders/new — Risk: medium",
+    "capabilityId": "navigate.to.orders.new",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    }
+  },
+  {
+    "name": "navigate_to_products_product_id_details",
+    "description": "Navigate to /products/:productId/details — Navigate to route /products/:productId/details — Risk: medium",
+    "capabilityId": "navigate.to.products.product-id.details",
+    "input_schema": {
+      "properties": {
+        "productId": {
+          "description": "Route parameter \"productId\"",
+          "type": "string"
+        }
+      },
+      "required": [
+        "productId"
+      ],
+      "type": "object"
+    }
+  }
+]

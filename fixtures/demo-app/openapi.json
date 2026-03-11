@@ -1,0 +1,143 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Demo E-Commerce API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/orders": {
+      "get": {
+        "operationId": "listOrders",
+        "tags": ["orders"],
+        "summary": "List orders",
+        "description": "Retrieve a paginated list of orders for the current user.",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "shipped", "delivered", "cancelled"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": { "type": "array", "items": { "type": "object" } },
+                    "total": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createOrder",
+        "tags": ["orders"],
+        "summary": "Create order",
+        "description": "Place a new order.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["items", "shippingAddressId"],
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["productId", "quantity"],
+                      "properties": {
+                        "productId": { "type": "string" },
+                        "quantity": { "type": "integer", "minimum": 1 }
+                      }
+                    }
+                  },
+                  "shippingAddressId": { "type": "string" },
+                  "paymentMethodId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Created" }
+        }
+      }
+    },
+    "/api/orders/{orderId}": {
+      "get": {
+        "operationId": "getOrder",
+        "tags": ["orders"],
+        "summary": "Get order by ID",
+        "parameters": [
+          { "name": "orderId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      },
+      "delete": {
+        "operationId": "cancelOrder",
+        "tags": ["orders"],
+        "summary": "Cancel an order",
+        "description": "Cancel a pending order. Cannot cancel shipped orders.",
+        "parameters": [
+          { "name": "orderId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "204": { "description": "Cancelled" }
+        }
+      }
+    },
+    "/api/products": {
+      "get": {
+        "operationId": "listProducts",
+        "tags": ["products"],
+        "summary": "List products",
+        "parameters": [
+          { "name": "q", "in": "query", "schema": { "type": "string" } },
+          { "name": "category", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    },
+    "/api/users/me": {
+      "get": {
+        "operationId": "getCurrentUser",
+        "tags": ["users"],
+        "summary": "Get current user profile",
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      },
+      "patch": {
+        "operationId": "updateProfile",
+        "tags": ["users"],
+        "summary": "Update user profile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated" }
+        }
+      }
+    }
+  }
+}

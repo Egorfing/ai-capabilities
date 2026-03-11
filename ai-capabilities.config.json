@@ -1,0 +1,60 @@
+{
+  "project": {
+    "root": ".",
+    "tsconfig": "./tsconfig.json"
+  },
+  "paths": {
+    "include": ["src/**/*", "fixtures/demo-app/src/**/*"],
+    "exclude": ["dist/**", "output/**"]
+  },
+  "extractors": {
+    "openapi": {
+      "spec": "./fixtures/demo-app/openapi.json"
+    },
+    "reactQuery": {
+      "include": ["src/**/*"],
+      "exclude": ["src/playground/**"]
+    },
+    "router": {
+      "include": ["src/**/*"],
+      "exclude": ["src/legacy/**"]
+    },
+    "form": {
+      "include": ["src/**/*"],
+      "exclude": []
+    }
+  },
+  "output": {
+    "raw": "./output/capabilities.raw.json",
+    "enriched": "./output/capabilities.enriched.json",
+    "diagnostics": "./output/diagnostics.jsonl",
+    "canonical": "./output/ai-capabilities.json",
+    "public": "./output/ai-capabilities.public.json"
+  },
+  "schema": {
+    "maxDepth": 5,
+    "resolveRefs": true
+  },
+  "policy": {
+    "overrides": {
+      "api.orders.cancel-order": {
+        "riskLevel": "high",
+        "confirmationPolicy": "always",
+        "visibility": "internal"
+      }
+    }
+  },
+  "manifest": {
+    "app": {
+      "name": "Capability Engine Demo",
+      "version": "0.1.0",
+      "description": "Capability manifest for demo project",
+      "baseUrl": "http://localhost:3000"
+    },
+    "defaults": {
+      "visibility": "internal",
+      "riskLevel": "low",
+      "confirmationPolicy": "none"
+    }
+  }
+}

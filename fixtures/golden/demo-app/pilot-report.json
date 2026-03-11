@@ -1,0 +1,75 @@
+{
+  "startedAt": "2026-03-11T12:34:26.186Z",
+  "finishedAt": "2026-03-11T12:34:26.264Z",
+  "projectPath": "/Users/MAC/Documents/real-ai-assistant-for-your-website/fixtures/demo-app",
+  "configPath": "/Users/MAC/Documents/real-ai-assistant-for-your-website/fixtures/config/basic/ai-capabilities.config.json",
+  "traceId": "mmm0trm2-2j1qen",
+  "status": "success",
+  "summary": {
+    "capabilitiesTotal": 16,
+    "publicCapabilities": 2,
+    "diagnostics": {
+      "info": 6,
+      "warning": 0,
+      "error": 0
+    }
+  },
+  "compatibility": {
+    "errors": [],
+    "warnings": []
+  },
+  "extractors": [
+    {
+      "name": "form",
+      "capabilities": 1,
+      "warnings": 0,
+      "errors": 0,
+      "status": "success"
+    },
+    {
+      "name": "forms",
+      "capabilities": 0,
+      "warnings": 0,
+      "errors": 0,
+      "status": "success"
+    },
+    {
+      "name": "openapi",
+      "capabilities": 7,
+      "warnings": 0,
+      "errors": 0,
+      "status": "success"
+    },
+    {
+      "name": "react-query",
+      "capabilities": 8,
+      "warnings": 0,
+      "errors": 0,
+      "status": "success"
+    },
+    {
+      "name": "router",
+      "capabilities": 5,
+      "warnings": 0,
+      "errors": 0,
+      "status": "success"
+    }
+  ],
+  "artifacts": {
+    "rawManifest": "./fixtures/config/basic/output/raw.json",
+    "canonicalManifest": "./fixtures/config/basic/output/canonical.json",
+    "publicManifest": "./fixtures/config/basic/output/public.json",
+    "enrichedManifest": "./fixtures/config/basic/output/enriched.json",
+    "diagnosticsLog": "./fixtures/config/basic/output/diag.jsonl",
+    "tracesDir": "./fixtures/config/basic/output/traces",
+    "pilotReport": "./fixtures/golden/temp-run/pilot-report.json",
+    "pilotSummary": "./fixtures/golden/temp-run/pilot-summary.md"
+  },
+  "unsupportedPatterns": [],
+  "diagnosticsSummary": {
+    "total": 6,
+    "errors": 0,
+    "warnings": 0,
+    "infos": 6
+  }
+}

@@ -1,0 +1,913 @@
+{
+  "manifestVersion": "1.0.0",
+  "generatedAt": "2026-03-11T14:01:08.910Z",
+  "app": {
+    "name": "Fixture App",
+    "version": "0.0.1",
+    "description": "Fixture manifest",
+    "baseUrl": "http://localhost:3000"
+  },
+  "defaults": {
+    "visibility": "internal",
+    "riskLevel": "medium",
+    "confirmationPolicy": "none"
+  },
+  "capabilities": [
+    {
+      "id": "api.orders.list-orders",
+      "kind": "read",
+      "displayTitle": "List orders",
+      "description": "Retrieve a paginated list of orders for the current user.",
+      "inputSchema": {
+        "properties": {
+          "limit": {
+            "default": 20,
+            "type": "integer"
+          },
+          "page": {
+            "default": 1,
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "cancelled",
+              "delivered",
+              "pending",
+              "shipped"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "items": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "public",
+        "riskLevel": "low",
+        "confirmationPolicy": "none",
+        "permissionScope": [
+          "orders:read"
+        ]
+      },
+      "effects": [
+        {
+          "type": "network-request"
+        }
+      ],
+      "tags": [
+        "orders",
+        "public"
+      ],
+      "sources": [
+        {
+          "type": "openapi",
+          "filePath": "/Users/MAC/Documents/real-ai-assistant-for-your-website/fixtures/demo-app/openapi.json",
+          "location": "GET /api/orders"
+        }
+      ],
+      "metadata": {
+        "operationId": "listOrders",
+        "method": "GET",
+        "path": "/api/orders"
+      },
+      "aliases": [
+        "api orders list orders",
+        "api.orders.list-orders"
+      ],
+      "exampleIntents": [
+        "Use api.orders.list-orders in a flow"
+      ],
+      "userDescription": "Retrieve a paginated list of orders for the current user. (semantic view)"
+    },
+    {
+      "id": "api.orders.create-order",
+      "kind": "mutation",
+      "displayTitle": "Create order",
+      "description": "Place a new order.",
+      "inputSchema": {
+        "properties": {
+          "comment": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "items": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "confirmed",
+              "draft"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "customerId",
+          "items",
+          "status"
+        ],
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "internal",
+        "riskLevel": "medium",
+        "confirmationPolicy": "none"
+      },
+      "effects": [
+        {
+          "type": "network-request"
+        },
+        {
+          "type": "state-mutation"
+        }
+      ],
+      "tags": [
+        "orders",
+        "react-query",
+        "mutation",
+        "form"
+      ],
+      "sources": [
+        {
+          "type": "openapi",
+          "filePath": "/Users/MAC/Documents/real-ai-assistant-for-your-website/fixtures/demo-app/openapi.json",
+          "location": "POST /api/orders"
+        },
+        {
+          "type": "react-query",
+          "filePath": "src/hooks/useOrders.ts",
+          "location": "useCreateOrder"
+        },
+        {
+          "type": "form",
+          "filePath": "src/forms/createOrder.ts",
+          "location": "createOrderSchema"
+        }
+      ],
+      "metadata": {
+        "operationId": "createOrder",
+        "method": "POST",
+        "path": "/api/orders",
+        "hookName": "useCreateOrder",
+        "reactQueryCall": "useMutation",
+        "apiUrl": "/api/orders",
+        "schemaName": "createOrderSchema"
+      },
+      "aliases": [
+        "api orders create order",
+        "api.orders.create-order"
+      ],
+      "exampleIntents": [
+        "Use api.orders.create-order in a flow"
+      ],
+      "userDescription": "Place a new order. (semantic view)"
+    },
+    {
+      "id": "api.orders.get-order",
+      "kind": "read",
+      "displayTitle": "Get order by ID",
+      "description": "Get order by ID",
+      "inputSchema": {
+        "properties": {
+          "orderId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orderId"
+        ],
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "internal",
+        "riskLevel": "medium",
+        "confirmationPolicy": "none"
+      },
+      "effects": [
+        {
+          "type": "network-request"
+        }
+      ],
+      "tags": [
+        "orders"
+      ],
+      "sources": [
+        {
+          "type": "openapi",
+          "filePath": "/Users/MAC/Documents/real-ai-assistant-for-your-website/fixtures/demo-app/openapi.json",
+          "location": "GET /api/orders/{orderId}"
+        }
+      ],
+      "metadata": {
+        "operationId": "getOrder",
+        "method": "GET",
+        "path": "/api/orders/{orderId}"
+      },
+      "aliases": [
+        "api orders get order",
+        "api.orders.get-order"
+      ],
+      "exampleIntents": [
+        "Use api.orders.get-order in a flow"
+      ],
+      "userDescription": "Get order by ID (semantic view)"
+    },
+    {
+      "id": "api.orders.cancel-order",
+      "kind": "mutation",
+      "displayTitle": "Cancel an order",
+      "description": "Cancel a pending order. Cannot cancel shipped orders.",
+      "inputSchema": {
+        "properties": {
+          "orderId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orderId"
+        ],
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "internal",
+        "riskLevel": "high",
+        "confirmationPolicy": "always",
+        "permissionScope": [
+          "orders:write"
+        ]
+      },
+      "effects": [
+        {
+          "type": "network-request"
+        },
+        {
+          "type": "state-mutation"
+        }
+      ],
+      "tags": [
+        "orders",
+        "react-query",
+        "mutation"
+      ],
+      "sources": [
+        {
+          "type": "openapi",
+          "filePath": "/Users/MAC/Documents/real-ai-assistant-for-your-website/fixtures/demo-app/openapi.json",
+          "location": "DELETE /api/orders/{orderId}"
+        },
+        {
+          "type": "react-query",
+          "filePath": "src/hooks/useOrders.ts",
+          "location": "useCancelOrder"
+        }
+      ],
+      "metadata": {
+        "operationId": "cancelOrder",
+        "method": "DELETE",
+        "path": "/api/orders/{orderId}",
+        "hookName": "useCancelOrder",
+        "reactQueryCall": "useMutation",
+        "apiUrl": "/api/orders/"
+      },
+      "aliases": [
+        "api orders cancel order",
+        "api.orders.cancel-order"
+      ],
+      "exampleIntents": [
+        "Use api.orders.cancel-order in a flow"
+      ],
+      "userDescription": "Cancel a pending order. Cannot cancel shipped orders. (semantic view)"
+    },
+    {
+      "id": "api.products.list-products",
+      "kind": "read",
+      "displayTitle": "List products",
+      "description": "List products",
+      "inputSchema": {
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "q": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "internal",
+        "riskLevel": "medium",
+        "confirmationPolicy": "none"
+      },
+      "effects": [
+        {
+          "type": "network-request"
+        }
+      ],
+      "tags": [
+        "products"
+      ],
+      "sources": [
+        {
+          "type": "openapi",
+          "filePath": "/Users/MAC/Documents/real-ai-assistant-for-your-website/fixtures/demo-app/openapi.json",
+          "location": "GET /api/products"
+        }
+      ],
+      "metadata": {
+        "operationId": "listProducts",
+        "method": "GET",
+        "path": "/api/products"
+      },
+      "aliases": [
+        "api products list products",
+        "api.products.list-products"
+      ],
+      "exampleIntents": [
+        "Use api.products.list-products in a flow"
+      ],
+      "userDescription": "List products (semantic view)"
+    },
+    {
+      "id": "api.users.get-current-user",
+      "kind": "read",
+      "displayTitle": "Get current user profile",
+      "description": "Get current user profile",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "internal",
+        "riskLevel": "medium",
+        "confirmationPolicy": "none"
+      },
+      "effects": [
+        {
+          "type": "network-request"
+        }
+      ],
+      "tags": [
+        "users"
+      ],
+      "sources": [
+        {
+          "type": "openapi",
+          "filePath": "/Users/MAC/Documents/real-ai-assistant-for-your-website/fixtures/demo-app/openapi.json",
+          "location": "GET /api/users/me"
+        }
+      ],
+      "metadata": {
+        "operationId": "getCurrentUser",
+        "method": "GET",
+        "path": "/api/users/me"
+      },
+      "aliases": [
+        "api users get current user",
+        "api.users.get-current-user"
+      ],
+      "exampleIntents": [
+        "Use api.users.get-current-user in a flow"
+      ],
+      "userDescription": "Get current user profile (semantic view)"
+    },
+    {
+      "id": "api.users.update-profile",
+      "kind": "mutation",
+      "displayTitle": "Update user profile",
+      "description": "Update user profile",
+      "inputSchema": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "public",
+        "riskLevel": "medium",
+        "confirmationPolicy": "once",
+        "permissionScope": [
+          "users:write"
+        ]
+      },
+      "effects": [
+        {
+          "type": "network-request"
+        },
+        {
+          "type": "state-mutation"
+        }
+      ],
+      "tags": [
+        "users",
+        "react-query",
+        "mutation"
+      ],
+      "sources": [
+        {
+          "type": "openapi",
+          "filePath": "/Users/MAC/Documents/real-ai-assistant-for-your-website/fixtures/demo-app/openapi.json",
+          "location": "PATCH /api/users/me"
+        },
+        {
+          "type": "react-query",
+          "filePath": "src/hooks/useProfile.ts",
+          "location": "useUpdateProfile"
+        }
+      ],
+      "metadata": {
+        "operationId": "updateProfile",
+        "method": "PATCH",
+        "path": "/api/users/me",
+        "hookName": "useUpdateProfile",
+        "reactQueryCall": "useMutation",
+        "apiUrl": "/api/users/me"
+      },
+      "aliases": [
+        "api users update profile",
+        "api.users.update-profile"
+      ],
+      "exampleIntents": [
+        "Use api.users.update-profile in a flow"
+      ],
+      "userDescription": "Update user profile (semantic view)"
+    },
+    {
+      "id": "hook.orders",
+      "kind": "read",
+      "displayTitle": "useOrders",
+      "description": "useOrders",
+      "inputSchema": {
+        "properties": {
+          "filters": {
+            "description": "OrderFilters",
+            "type": "unknown"
+          }
+        },
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "internal",
+        "riskLevel": "medium",
+        "confirmationPolicy": "none"
+      },
+      "effects": [
+        {
+          "type": "network-request"
+        },
+        {
+          "type": "navigation"
+        }
+      ],
+      "tags": [
+        "react-query",
+        "read",
+        "router",
+        "navigation"
+      ],
+      "sources": [
+        {
+          "type": "react-query",
+          "filePath": "src/hooks/useOrders.ts",
+          "location": "useOrders"
+        },
+        {
+          "type": "router",
+          "filePath": "src/router/routes.tsx",
+          "location": "/orders"
+        }
+      ],
+      "metadata": {
+        "hookName": "useOrders",
+        "reactQueryCall": "useQuery",
+        "queryKey": [
+          "orders"
+        ],
+        "apiUrl": "/api/orders",
+        "path": "/orders",
+        "element": "\"<Orders />\""
+      },
+      "aliases": [
+        "hook orders",
+        "hook.orders"
+      ],
+      "exampleIntents": [
+        "Use hook.orders in a flow"
+      ],
+      "userDescription": "useOrders (semantic view)"
+    },
+    {
+      "id": "hook.order",
+      "kind": "read",
+      "displayTitle": "useOrder",
+      "description": "useOrder",
+      "inputSchema": {
+        "properties": {
+          "orderId": {
+            "description": "string",
+            "type": "unknown"
+          }
+        },
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "internal",
+        "riskLevel": "medium",
+        "confirmationPolicy": "none"
+      },
+      "effects": [
+        {
+          "type": "network-request"
+        }
+      ],
+      "tags": [
+        "react-query",
+        "read"
+      ],
+      "sources": [
+        {
+          "type": "react-query",
+          "filePath": "src/hooks/useOrders.ts",
+          "location": "useOrder"
+        }
+      ],
+      "metadata": {
+        "hookName": "useOrder",
+        "reactQueryCall": "useQuery",
+        "queryKey": [
+          "orders"
+        ],
+        "apiUrl": "/api/orders/"
+      },
+      "aliases": [
+        "hook order",
+        "hook.order"
+      ],
+      "exampleIntents": [
+        "Use hook.order in a flow"
+      ],
+      "userDescription": "useOrder (semantic view)"
+    },
+    {
+      "id": "hook.products",
+      "kind": "read",
+      "displayTitle": "useProducts",
+      "description": "useProducts",
+      "inputSchema": {
+        "properties": {
+          "params": {
+            "description": "ProductSearchParams",
+            "type": "unknown"
+          }
+        },
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "internal",
+        "riskLevel": "medium",
+        "confirmationPolicy": "none"
+      },
+      "effects": [
+        {
+          "type": "network-request"
+        }
+      ],
+      "tags": [
+        "react-query",
+        "read"
+      ],
+      "sources": [
+        {
+          "type": "react-query",
+          "filePath": "src/hooks/useProducts.ts",
+          "location": "useProducts"
+        }
+      ],
+      "metadata": {
+        "hookName": "useProducts",
+        "reactQueryCall": "useQuery",
+        "queryKey": [
+          "products"
+        ],
+        "apiUrl": "/api/products"
+      },
+      "aliases": [
+        "hook products",
+        "hook.products"
+      ],
+      "exampleIntents": [
+        "Use hook.products in a flow"
+      ],
+      "userDescription": "useProducts (semantic view)"
+    },
+    {
+      "id": "hook.product-details",
+      "kind": "read",
+      "displayTitle": "useProductDetails",
+      "description": "useProductDetails",
+      "inputSchema": {
+        "properties": {
+          "productId": {
+            "description": "string",
+            "type": "unknown"
+          }
+        },
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "internal",
+        "riskLevel": "medium",
+        "confirmationPolicy": "none"
+      },
+      "effects": [
+        {
+          "type": "network-request"
+        }
+      ],
+      "tags": [
+        "react-query",
+        "read"
+      ],
+      "sources": [
+        {
+          "type": "react-query",
+          "filePath": "src/hooks/useProducts.ts",
+          "location": "useProductDetails"
+        }
+      ],
+      "metadata": {
+        "hookName": "useProductDetails",
+        "reactQueryCall": "useQuery",
+        "queryKey": [
+          "products"
+        ],
+        "apiUrl": "/api/products/"
+      },
+      "aliases": [
+        "hook product details",
+        "hook.product-details"
+      ],
+      "exampleIntents": [
+        "Use hook.product-details in a flow"
+      ],
+      "userDescription": "useProductDetails (semantic view)"
+    },
+    {
+      "id": "hook.current-user",
+      "kind": "read",
+      "displayTitle": "useCurrentUser",
+      "description": "useCurrentUser",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "internal",
+        "riskLevel": "medium",
+        "confirmationPolicy": "none"
+      },
+      "effects": [
+        {
+          "type": "network-request"
+        }
+      ],
+      "tags": [
+        "react-query",
+        "read"
+      ],
+      "sources": [
+        {
+          "type": "react-query",
+          "filePath": "src/hooks/useProfile.ts",
+          "location": "useCurrentUser"
+        }
+      ],
+      "metadata": {
+        "hookName": "useCurrentUser",
+        "reactQueryCall": "useQuery",
+        "queryKey": [
+          "user",
+          "me"
+        ],
+        "apiUrl": "/api/users/me"
+      },
+      "aliases": [
+        "hook current user",
+        "hook.current-user"
+      ],
+      "exampleIntents": [
+        "Use hook.current-user in a flow"
+      ],
+      "userDescription": "useCurrentUser (semantic view)"
+    },
+    {
+      "id": "navigate.to.root",
+      "kind": "navigation",
+      "displayTitle": "Navigate to /",
+      "description": "Navigate to route /",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "internal",
+        "riskLevel": "medium",
+        "confirmationPolicy": "none"
+      },
+      "effects": [
+        {
+          "type": "navigation"
+        }
+      ],
+      "tags": [
+        "router",
+        "navigation"
+      ],
+      "sources": [
+        {
+          "type": "router",
+          "filePath": "src/router/routes.tsx",
+          "location": "/"
+        }
+      ],
+      "metadata": {
+        "path": "/",
+        "element": "\"<Dashboard />\""
+      },
+      "aliases": [
+        "navigate to root",
+        "navigate.to.root"
+      ],
+      "exampleIntents": [
+        "Use navigate.to.root in a flow"
+      ],
+      "userDescription": "Navigate to route / (semantic view)"
+    },
+    {
+      "id": "navigate.to.orders.order-id",
+      "kind": "navigation",
+      "displayTitle": "Navigate to /orders/:orderId",
+      "description": "Navigate to route /orders/:orderId",
+      "inputSchema": {
+        "properties": {
+          "orderId": {
+            "description": "Route parameter \"orderId\"",
+            "type": "string"
+          }
+        },
+        "required": [
+          "orderId"
+        ],
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "internal",
+        "riskLevel": "medium",
+        "confirmationPolicy": "none"
+      },
+      "effects": [
+        {
+          "type": "navigation"
+        }
+      ],
+      "tags": [
+        "router",
+        "navigation"
+      ],
+      "sources": [
+        {
+          "type": "router",
+          "filePath": "src/router/routes.tsx",
+          "location": "/orders/:orderId"
+        }
+      ],
+      "metadata": {
+        "path": "/orders/:orderId",
+        "element": "\"<OrderDetails />\""
+      },
+      "aliases": [
+        "navigate to orders order id",
+        "navigate.to.orders.order-id"
+      ],
+      "exampleIntents": [
+        "Use navigate.to.orders.order-id in a flow"
+      ],
+      "userDescription": "Navigate to route /orders/:orderId (semantic view)"
+    },
+    {
+      "id": "navigate.to.orders.new",
+      "kind": "navigation",
+      "displayTitle": "Navigate to /orders/new",
+      "description": "Navigate to route /orders/new",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "internal",
+        "riskLevel": "medium",
+        "confirmationPolicy": "none"
+      },
+      "effects": [
+        {
+          "type": "navigation"
+        }
+      ],
+      "tags": [
+        "router",
+        "navigation"
+      ],
+      "sources": [
+        {
+          "type": "router",
+          "filePath": "src/router/routes.tsx",
+          "location": "/orders/new"
+        }
+      ],
+      "metadata": {
+        "path": "/orders/new",
+        "element": "\"<CreateOrder />\""
+      },
+      "aliases": [
+        "navigate to orders new",
+        "navigate.to.orders.new"
+      ],
+      "exampleIntents": [
+        "Use navigate.to.orders.new in a flow"
+      ],
+      "userDescription": "Navigate to route /orders/new (semantic view)"
+    },
+    {
+      "id": "navigate.to.products.product-id.details",
+      "kind": "navigation",
+      "displayTitle": "Navigate to /products/:productId/details",
+      "description": "Navigate to route /products/:productId/details",
+      "inputSchema": {
+        "properties": {
+          "productId": {
+            "description": "Route parameter \"productId\"",
+            "type": "string"
+          }
+        },
+        "required": [
+          "productId"
+        ],
+        "type": "object"
+      },
+      "policy": {
+        "visibility": "internal",
+        "riskLevel": "medium",
+        "confirmationPolicy": "none"
+      },
+      "effects": [
+        {
+          "type": "navigation"
+        }
+      ],
+      "tags": [
+        "router",
+        "navigation"
+      ],
+      "sources": [
+        {
+          "type": "router",
+          "filePath": "src/router/routes.tsx",
+          "location": "/products/:productId/details"
+        }
+      ],
+      "metadata": {
+        "path": "/products/:productId/details",
+        "element": "\"<ProductDetails />\""
+      },
+      "aliases": [
+        "navigate to products product id details",
+        "navigate.to.products.product-id.details"
+      ],
+      "exampleIntents": [
+        "Use navigate.to.products.product-id.details in a flow"
+      ],
+      "userDescription": "Navigate to route /products/:productId/details (semantic view)"
+    }
+  ]
+}

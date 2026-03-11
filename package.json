@@ -1,0 +1,75 @@
+{
+  "name": "ai-capabilities",
+  "version": "0.1.0",
+  "description": "Turn your software into an AI-compatible system. AI Capabilities is an open standard for exposing application actions to AI agents.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./cli": "./dist/cli/index.js"
+  },
+  "bin": {
+    "ai-capabilities": "./dist/cli/index.js"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "build:packages": "npm run build --workspaces --if-present",
+    "dev": "tsx watch src/index.ts",
+    "lint": "eslint 'src/**/*.ts'",
+    "extract": "tsx src/cli/index.ts extract",
+    "enrich": "tsx src/cli/index.ts enrich",
+    "serve": "tsx src/cli/index.ts serve",
+    "pilot": "tsx src/cli/index.ts pilot",
+    "inspect": "tsx src/cli/index.ts inspect",
+    "validate": "tsx src/cli/index.ts validate",
+    "trace": "tsx src/cli/index.ts trace list",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "capabilities",
+    "agent-runtime",
+    "ai-tools",
+    "ai-integration"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Egorfing/ai-capabilities"
+  },
+  "homepage": "https://github.com/Egorfing/ai-capabilities",
+  "bugs": {
+    "url": "https://github.com/Egorfing/ai-capabilities/issues"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^25.4.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "@apidevtools/json-schema-ref-parser": "^11.6.0",
+    "ajv": "^6.14.0",
+    "js-yaml": "^4.1.1",
+    "ts-morph": "^27.0.2"
+  }
+}

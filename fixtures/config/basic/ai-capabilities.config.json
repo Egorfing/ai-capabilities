@@ -1,0 +1,75 @@
+{
+  "project": {
+    "root": "../../demo-app",
+    "tsconfig": "../../../tsconfig.json"
+  },
+  "paths": {
+    "include": ["src/**/*"],
+    "exclude": ["src/ignored/**"]
+  },
+  "extractors": {
+    "openapi": {
+      "spec": "../../demo-app/openapi.json"
+    },
+    "reactQuery": {
+      "include": ["src/hooks/**"],
+      "exclude": ["src/hooks/legacy/**"],
+      "tsconfig": "../../../tsconfig.json"
+    },
+    "router": {
+      "include": ["src/router/**"],
+      "exclude": []
+    },
+    "form": {
+      "include": ["src/forms/**"],
+      "exclude": []
+    }
+  },
+  "output": {
+    "raw": "./output/raw.json",
+    "enriched": "./output/enriched.json",
+    "diagnostics": "./output/diag.jsonl",
+    "canonical": "./output/canonical.json",
+    "public": "./output/public.json"
+  },
+  "schema": {
+    "maxDepth": 4,
+    "resolveRefs": true
+  },
+  "policy": {
+    "overrides": {
+      "api.orders.list-orders": {
+        "visibility": "public",
+        "riskLevel": "low",
+        "confirmationPolicy": "none",
+        "permissionScope": ["orders:read"],
+        "tags": ["orders", "public"]
+      },
+      "api.orders.cancel-order": {
+        "visibility": "internal",
+        "riskLevel": "high",
+        "confirmationPolicy": "always",
+        "permissionScope": ["orders:write"]
+      },
+      "api.users.update-profile": {
+        "visibility": "public",
+        "riskLevel": "medium",
+        "confirmationPolicy": "once",
+        "permissionScope": ["users:write"]
+      }
+    }
+  },
+  "manifest": {
+    "app": {
+      "name": "Fixture App",
+      "version": "0.0.1",
+      "description": "Fixture manifest",
+      "baseUrl": "http://localhost:3000"
+    },
+    "defaults": {
+      "visibility": "internal",
+      "riskLevel": "medium",
+      "confirmationPolicy": "none"
+    }
+  }
+}

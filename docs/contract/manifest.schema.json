@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://capability-engine/schemas/raw-manifest.json",
+  "title": "RawCapabilityManifest",
+  "description": "Output of the extraction pipeline — capabilities before LLM enrichment.",
+  "type": "object",
+  "required": ["meta", "capabilities"],
+  "additionalProperties": false,
+  "properties": {
+    "meta": { "$ref": "#/definitions/ManifestMeta" },
+    "capabilities": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/RawCapability" }
+    }
+  },
+  "definitions": {
+    "ManifestMeta": {
+      "type": "object",
+      "required": ["generatedAt", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "sourceProject": { "type": "string" },
+        "extractors": { "type": "array", "items": { "type": "string" } },
+        "version": { "type": "string" }
+      }
+    },
+    "SourceType": {
+      "type": "string",
+      "enum": ["openapi", "react-query", "router", "form", "manual", "custom"]
+    },
+    "CapabilityKind": {
+      "type": "string",
+      "enum": ["read", "mutation", "navigation", "ui-action", "workflow"]
+    },
+    "CapabilityEffect": {
+      "type": "string",
+      "enum": ["network-request", "state-mutation", "navigation", "notification", "file-operation", "external-service"]
+    },
+    "CapabilitySource": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "$ref": "#/definitions/SourceType" },
+        "filePath": { "type": "string" },
+        "location": { "type": "string" }
+      }
+    },
+    "RawCapability": {
+      "type": "object",
+      "required": ["id", "source", "kind", "inputSchema", "metadata"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]*$" },
+        "source": { "$ref": "#/definitions/CapabilitySource" },
+        "kind": { "$ref": "#/definitions/CapabilityKind" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "inputSchema": { "type": "object" },
+        "outputSchema": { "type": "object" },
+        "effects": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/CapabilityEffect" }
+        },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "permissions": { "type": "array", "items": { "type": "string" } },
+        "metadata": { "type": "object" }
+      }
+    }
+  }
+}
