@@ -2,6 +2,13 @@
 
 `fixtures/demo-app` — это пример React/TypeScript проекта, покрывающий OpenAPI, React Query, Router и Form паттерны.
 
+Перед запуском остальных шагов выполните:
+```bash
+npx ai-capabilities init
+```
+Команда создаст стартовый `ai-capabilities.config.json` и папку `src/ai-capabilities/` с registry + example capability, которые можно адаптировать под demo или свой проект.
+Определения используют `defineCapability`, поэтому переносить код между демо и реальным приложением просто (см. [define-capability.md](./define-capability.md)) и дополнительно [frontend-actions.md](./frontend-actions.md) для UI/навигационных кейсов.
+
 ## Быстрый сценарий
 1. **Extraction**
    ```bash
@@ -32,6 +39,14 @@
    npm run pilot -- --project fixtures/demo-app --config fixtures/config/basic/ai-capabilities.config.json --with-enrich
    ```
    - Результаты: `pilot-report.json`, `pilot-summary.md`, traces.
+
+6. **Doctor (диагностика)**
+   ```bash
+   npx ai-capabilities doctor
+   ```
+   Получите краткий отчёт о конфиге, артефактах и готовности к пилоту. Подробности — [docs/doctor.md](./doctor.md).
+
+Если хотите увидеть полный UI-поток, изучите [examples/react-app](../examples/react-app) и [docs/happy-path.md](./happy-path.md).
 
 ## Что смотреть в коде
 - `fixtures/demo-app/openapi.json` — OpenAPI spec.

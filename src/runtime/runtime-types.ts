@@ -2,7 +2,12 @@ import type { CapabilityExecutionRequest, CapabilityExecutionResult } from "../t
 
 export type ExecutionMode = "internal" | "public";
 
-export type CapabilityHandler = (input: Record<string, unknown>) => unknown | Promise<unknown>;
+export type CapabilityHandlerContext = Record<string, unknown> | undefined;
+
+export type CapabilityHandler = (
+  input: Record<string, unknown>,
+  context?: CapabilityHandlerContext,
+) => unknown | Promise<unknown>;
 
 export interface CapabilityRuntimeExecuteOptions {
   mode?: ExecutionMode;
@@ -10,6 +15,8 @@ export interface CapabilityRuntimeExecuteOptions {
   permissionScopes?: string[];
   /** Whether destructive / high-risk operations are allowed. */
   allowDestructive?: boolean;
+  /** Optional context passed through to the registered handler (e.g. router/ui adapters). */
+  handlerContext?: CapabilityHandlerContext;
 }
 
 export interface CapabilityRuntimeInterface {

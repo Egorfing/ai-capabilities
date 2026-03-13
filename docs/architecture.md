@@ -1,75 +1,62 @@
-# Архитектура
+# Architecture overview
 
-AI Capabilities is a capability layer that makes applications controllable by AI agents.
-
-The platform extracts actions from applications, builds a canonical capability manifest, and exposes those capabilities through adapters and a runtime.
+AI Capabilities adds an “agent surface” to any application without rewiring your stack. The platform extracts actionable functions, describes them in a manifest, enforces policy, and exposes an execution runtime for human or AI operators.
 
 ```
-Application → Extraction → Canonical Manifest → Adapters → Runtime → Server & Discovery
+┌──────────┐   ┌─────────────┐   ┌─────────────┐   ┌────────────┐   ┌──────────────┐
+│  Source  │→ │  Extraction  │→ │  Manifest    │→ │  Runtime &  │→ │  Agents / LLM │
+│  code    │   │  & merge     │   │  builder    │   │  registry   │   │  tool calls   │
+└──────────┘   └─────────────┘   └─────────────┘   └────────────┘   └──────────────┘
+      ▲               │                │                  │                    │
+      │               │                │                  │                    │
+      │               ▼                ▼                  ▼                    │
+      │        `capabilities.raw.json` │         `ai-capabilities.json`        │
+      │                                ▼                                       │
+      │                         Public manifest                                │
+      │                                │                                       │
+      └─────────────────────────────── UI/runtime bindings ↔ Frontend actions ─┘
 ```
 
-Платформа строит полный цикл вокруг capabilities: от извлечения из исходников до публикации наружу. Ниже — линейный поток данных.
+## Key components
 
-```
-┌──────────┐   ┌─────────────┐   ┌──────────────┐   ┌────────────┐   ┌────────┐
-│ Extract  │→ │ Normalize & │→ │ Merge / Dedup │→ │ Canonical  │→ │ Public │
-│ pipeline │  │ Schema       │  │ + Diagnostics │  │ Manifest   │  │ Manifest│
-└──────────┘   └─────────────┘   └──────────────┘   └────────────┘   └────────┘
-      │              │                   │                  │             │
-      │              │                   │                  │             ▼
-      │              │                   │                  │      Enrichment
-      │              │                   │                  │             │
-      ▼              ▼                   ▼                  ▼             ▼
-Raw capabilities → Normalized schemas → Raw manifest → ai-capabilities.json → ai-capabilities.public.json
-                                                              │
-                                                              ▼
-                                                   Model adapters & runtime
-                                                              │
-                                                              ▼
-                                                       HTTP server + well-known
-```
-
-## Основные слои
-- **Extractors (`src/extractors`)** — читают исходники (OpenAPI, React Query, Router, Form) и формируют `RawCapability` плюс diagnostics.
-- **Normalization & merge (`src/normalize`, `src/merge`)** — ограничивает глубину схем, объединяет дубли, строит `capabilities.raw.json`.
-- **Manifest builder (`src/manifest`)** — превращает raw data в canonical manifest (`ai-capabilities.json`) и публичную версию (`ai-capabilities.public.json`).
-- **Enrichment (`src/enrich`)** — поверх canonical manifest добавляет UX-поля (aliases, example intents и т.д.) в `ai-capabilities.enriched.json`.
-- **Adapters (`src/adapters`)** — конвертируют canonical/public manifest в OpenAI/Anthropic/internal tool definitions.
-- **Runtime & binding (`src/runtime`, `src/binding`)** — исполняют capability через `CapabilityRegistry`, policy слой и handlers.
-- **Policy (`src/policy`)** — применяет visibility/risk/confirmation правила, завязанные на runtime mode.
-- **Server & external surface (`src/server`, `src/well-known`)** — HTTP API, transport-level tracing и публичный discovery endpoint.
-- **Pilot runner (`src/pilot`)** — orchestration поверх всех слоёв, формирующий отчёты и traces.
-
-## Артефакты и source of truth
-| Файл | Источник | Назначение |
+| Layer | Responsibility | Source folders |
 | --- | --- | --- |
-| `output/capabilities.raw.json` | Extract + merge | Диагностика того, что действительно найдено в коде. |
-| `output/ai-capabilities.json` | Manifest builder | Canonical контракт между всеми слоями. |
-| `output/ai-capabilities.public.json` | Manifest builder | Единственный источник данных для внешних агентов. |
-| `output/ai-capabilities.enriched.json` | Enrichment | UX-поля, не влияющие на выполнение. |
-| `fixtures/golden/demo-app/*.json` | Golden pipeline | Regression baseline для тестов. |
-| `output/pilot-report.json` / `pilot-summary.md` | Pilot runner | Сжатый статус прогона приложения. |
+| **Extraction** | Parse OpenAPI specs, React Query hooks, router definitions, or manual inputs into `RawCapability` objects. Includes diagnostics for each source. | `src/extractors`, `src/inspect` |
+| **Manifest builder** | Normalize schemas, merge duplicates, and emit canonical + public manifests. | `src/manifest`, `src/output` |
+| **Enrichment** | Optional semantic metadata (display titles, aliases, intents). | `src/enrich` |
+| **Registry & runtime** | Register executable handlers, evaluate policy (`visibility`, `riskLevel`, `confirmationPolicy`), and execute requests. | `src/runtime`, `src/binding`, `src/policy` |
+| **Server & well-known** | HTTP transport (`/execute`, `/capabilities`, `/.well-known/ai-capabilities.json`), traces, and public discovery surface. | `src/server` |
+| **Frontend actions** | Explicit navigation/UI capabilities that run inside the product shell while still using the same manifest + policy system. | `docs/frontend-actions.md`, `examples/react-app/src/ai-capabilities` |
 
-## Extension points
-- **Новые extractors** подключаются через `ExtractorRegistry` и добавляют свои diagnostics.
-- **Новые adapters** реализуются в `src/adapters/model-tools` и используют `AiCapabilitiesManifest`.
-- **Новые policy rules** добавляются в `src/policy/policy-checker.ts` (must be covered by tests).
-- **Новые binding стратегии** описываются в `src/binding` без изменения runtime core.
-- **Новые server endpoints** проходят через `create-server.ts`, но должны оставаться тонким transport слоем.
+## Data flow
+1. `npx ai-capabilities extract` → `output/capabilities.raw.json` + diagnostics.
+2. Manifest builder writes `output/ai-capabilities.json` (canonical) and `output/ai-capabilities.public.json` (filtered to public visibility).
+3. `npx ai-capabilities enrich` (optional) produces `output/ai-capabilities.enriched.json`.
+4. `registerCapabilityDefinitions` loads manual definitions into a `CapabilityRegistry`.
+5. Runtime executes capabilities either locally (`runtime.execute`) or via HTTP server `POST /execute`.
+6. Agents/LLMs read `/.well-known/ai-capabilities.json` to discover public actions and call them via the execution endpoint.
 
-## Связь слоёв
-1. CLI `extract` запускает pipeline, который пишет raw manifest и diagnostics.
-2. `build-ai-capabilities` создаёт canonical/public manifest и применяет policy overrides.
-3. При необходимости `enrich` дополняет canonical manifest, используя `ModelClient` (mock/internal).
-4. `buildModelToolDefinitions` и специализированные adapters конвертируют capabilities для конкретных LLM API.
-5. Runtime регистрирует handlers через `CapabilityRegistry`, валидацию политики обеспечивает `evaluatePolicy`.
-6. HTTP server принимает запросы, валидирует payload, делегирует runtime и стримит trace events.
-7. `/.well-known/ai-capabilities.json` строится из public manifest и server config, предоставляя discovery surface.
-8. `pilot` склеивает все шаги, собирает traces и формирует отчёты для реального приложения.
+## Frontend/UI flow
 
-## MVP ограничения
-- Нет автоматической генерации handlers; binding остаётся ручным.
-- Никакой multi-tenant aware policy, public mode = read-only.
-- Не включены auth/rate limiting; предполагается локалка/внутренний VPN.
-- Enrichment не изменяет schema/policy, а лишь добавляет display поля.
-- Golden fixtures основаны на `fixtures/demo-app`, поэтому любые новые extractors должны иметь свои тестовые данные.
+```
+User prompt → Agent plan → Capability runtime → Handler context (router/ui/notify) → UI updates
+```
+
+Frontend actions use the same metadata as backend capabilities but their handlers call adapters like `ctx.router.navigate`. See `examples/react-app/src/agent/runtime.ts` for how to provide these adapters.
+
+## Policy enforcement
+
+- Every capability includes `policy.visibility`, `riskLevel`, and `confirmationPolicy`.
+- The runtime refuses to run public-mode requests for internal/hidden capabilities.
+- Doctor (`npx ai-capabilities doctor`) inspects manifests to ensure high-risk capabilities are gated and scaffolds exist.
+
+## Files to know
+
+| File | Purpose |
+| --- | --- |
+| `ai-capabilities.config.json` | Source of truth for extraction paths and output destinations. |
+| `output/ai-capabilities.json` | Canonical manifest consumed by runtime, adapters, and agents. |
+| `output/ai-capabilities.public.json` | Safe surface for external agents. |
+| `examples/react-app/` | End-to-end integration demo (capabilities + runtime + chat UI). |
+
+Use this architecture map when onboarding new contributors or explaining how AI Capabilities slots into your application stack.

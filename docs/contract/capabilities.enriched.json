@@ -3,7 +3,7 @@
     "generatedAt": "2025-01-15T10:35:00Z",
     "sourceProject": "demo-ecommerce",
     "extractors": ["openapi", "react-query", "router"],
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "capabilities": [
     {

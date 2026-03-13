@@ -1,36 +1,57 @@
-# Contributing
+# Contributing guide
 
-Этот документ описывает, как расширять платформу, не ломая существующие контракты.
+Thank you for helping improve AI Capabilities! This document explains how the repository is structured, which tests/docs matter, and how to make common contributions safely.
 
-## Общие правила
-1. Всегда запускайте `npm test` перед PR — golden/contract тесты сразу покажут регрессии.
-2. Обновляйте соответствующие docs, когда добавляете новый слой или флаг CLI.
-3. Любые изменения manifest/adapters/policy требуют обновления golden fixtures.
+## Repository structure (high level)
 
-## Добавление extractor
-1. Создайте файл в `src/extractors/<name>.ts` и экспортируйте `Extractor` с `name`, `sourceType`, `extract`.
-2. Зарегистрируйте его в `src/extractors/index.ts` (попадёт в `defaultRegistry`).
-3. Возвращайте diagnostics (`DiagnosticEntry`) вместо throw, когда возможно.
-4. Добавьте тесты в `src/extractors/<name>.test.ts` + при необходимости fixtures.
-5. Обновите `docs/extraction.md`, описав новый источник и ограничения.
+| Path | Description |
+| --- | --- |
+| `src/` | CLI commands, extraction pipeline, manifest builder, runtime, server, doctor, and helper APIs. |
+| `docs/` | Public documentation surfaced from the README. Keep this directory organized; every new concept should have a doc and a link. |
+| `examples/react-app/` | Runnable demo that shows capabilities + runtime + deterministic agent. |
+| `fixtures/` | Demo projects and golden outputs used by contract tests. |
+| `scripts/` | Helper walkthroughs (e.g., `demo-run.md`). |
 
-## Добавление adapter
-1. Реализуйте функцию в `src/adapters/model-tools/` (см. существующие примеры).
-2. Используйте `buildModelToolDefinitions` как основу.
-3. Покройте тестами в `src/adapters/model-tools.test.ts`, обновите golden outputs (`fixtures/golden/demo-app/adapters.*.json`).
-4. Документируйте формат в `docs/adapters.md`.
+Always run `npm test` before pushing; the Vitest suite catches regressions in CLI behavior, runtime policy, and binding logic.
 
-## Новая policy rule
-1. Добавьте правило в `src/policy/policy-checker.ts` (в конец списка, чтобы сохранить предсказуемость).
-2. Обновите `src/policy/policy-checker.test.ts` с happy/deny кейсами.
-3. При необходимости добавьте новые override параметры в `config/types` и опишите в `docs/policy.md`.
+## General contribution rules
+1. **Keep docs in sync** — update README + relevant `docs/*.md` whenever a CLI flag, file structure, or workflow changes.
+2. **Prefer additive changes** — don’t remove legacy APIs without a migration guide.
+3. **Maintain golden fixtures** — if extraction output changes, regenerate via `npm run pilot` and update the corresponding files in `fixtures/golden`.
+4. **Respect policy defaults** — new capabilities/examples should default to `visibility: "internal"`, `riskLevel: "low"`, `confirmationPolicy: "none"`.
 
-## Handler binding стратегия
-1. Реализуйте новую стратегию в `src/binding` (например, маппинг REST endpoint → capability).
-2. Не смешивайте binding и runtime: runtime остаётся transport-agnostic.
-3. Добавьте интеграционный тест (`src/runtime/...` или `src/server/...`), который показывает новый binding.
+## Adding a new extractor
+1. Create `src/extractors/<name>.ts` exporting an `Extractor` (see existing modules for shape).
+2. Register it inside `src/extractors/index.ts` so CLI commands pick it up.
+3. Add fixtures under `fixtures/` if the extractor needs sample input.
+4. Write tests in `src/extractors/<name>.test.ts`. Keep them deterministic; rely on fixtures rather than network calls.
+5. Update `docs/extraction.md` to describe the new source type, limitations, and configuration flags.
+6. If the extractor changes manifest shape, refresh golden files via `npm run pilot`.
 
-## Работа с docs и тестами
-- README должен ссылаться на ключевые docs — проверяется тестом `docs-consistency`.
-- При добавлении CLI команды убедитесь, что `package.json` содержит соответствующий script, а README обновлён.
-- Golden файлы обновляйте через `npm run pilot` на demo fixture и копируйте артефакты в `fixtures/golden/demo-app`.
+## Improving documentation
+- Run `npm run docs-consistency` (if available) or check for broken links by building the docs site (future).
+- Cross-link from README’s “Documentation map” so newcomers can discover the new page.
+- Add troubleshooting entries to `docs/faq.md` whenever you fix a user-facing issue.
+- For workflow walkthroughs (init → extract → doctor), update `docs/happy-path.md`, `docs/demo-scenario.md`, or `scripts/demo-run.md` as appropriate.
+
+## Adding example capabilities or runtime wiring
+1. Follow the pattern in `examples/react-app/src/ai-capabilities/capabilities/`.
+2. Use `defineCapability` so schema, policy, and handler stay in one file.
+3. Update `examples/react-app/src/ai-capabilities/registry.ts` to register the new capability.
+4. If the runtime needs new adapters (router/ui/notify), extend `examples/react-app/src/agent/runtime.ts`.
+5. Document the new capability in the example README and, if it demonstrates a concept (e.g., chaining), add a dedicated doc such as `docs/capability-chaining.md`.
+
+## Submitting documentation-only changes
+1. Update the relevant `.md` files.
+2. Mention the change in README if it affects onboarding.
+3. No tests are required, but run `npm run lint` if you touched code snippets with TypeScript blocks to ensure formatting stays consistent.
+
+## GitHub checklists
+- When opening a **bug report**, include doctor output (`npx ai-capabilities doctor --json`) and capability samples.
+- For **feature requests**, describe the DX friction and link to the doc section you want to improve.
+- Every pull request should mention:
+  - What changed and why.
+  - Tests run (`npm test`, targeted Vitest file, or manual demo steps).
+  - Docs updated (list files).
+
+See `.github/ISSUE_TEMPLATE` and `.github/pull_request_template.md` for the exact wording that maintainers expect.

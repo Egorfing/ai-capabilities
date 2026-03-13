@@ -1,67 +1,117 @@
-# External agents surface
+# External agent integration
 
-AI Capabilities allows external agents to discover and execute application actions through a public capability manifest and well-known discovery endpoint.
+Use this guide when you want OpenAI, Claude, or an internal agent to call your capabilities over HTTP.
 
-Внешние агенты взаимодействуют только с публичными артефактами: public manifest и well-known endpoint.
+## Surface area overview
 
-## Public manifest
-- Файл: `ai-capabilities.public.json`.
-- Содержит только capabilities с `policy.visibility = "public"`.
-- Поля `execution.handlerRef`, `metadata`, пути источников удалены.
-- Используется server-ом для `GET /capabilities` в public режиме и для генерации well-known ответа.
+```
+Canonical manifest ──┐
+                      │ filter visibility=public
+                      ▼
+              ai-capabilities.public.json
+                      │
+                      ▼
+      /.well-known/ai-capabilities.json
+                      │
+          HTTP runtime (/execute, /capabilities)
+```
 
-## Well-known endpoint
-- URL: `/.well-known/ai-capabilities.json`.
-- Строится функцией `buildWellKnownResponse` и содержит:
-```json
+- **Canonical manifest** (`output/ai-capabilities.json`) contains every capability (internal + hidden). Keep it private.
+- **Public manifest** (`output/ai-capabilities.public.json`) only includes `policy.visibility === "public"`.
+- **Well-known endpoint** (`/.well-known/ai-capabilities.json`) advertises discovery metadata plus the subset of public capabilities you want agents to call.
+- **Runtime execution** (`POST /execute`) accepts `{ capabilityId, input }` and enforces policy (visibility, confirmation, risk).
+
+## Publishing the well-known endpoint
+
+1. Run `npx ai-capabilities extract` to regenerate canonical/public manifests.
+2. Start the server: `npx ai-capabilities serve --config ./ai-capabilities.config.json --port 4000`.
+3. Verify:
+   - `GET http://localhost:4000/.well-known/ai-capabilities.json`
+   - `GET http://localhost:4000/capabilities?visibility=public`
+4. Behind a reverse proxy, host the same paths at your production domain.
+
+Keep destructive capabilities internal/hidden so they never appear in the public manifest.
+
+## Execution endpoint
+
+Every public capability references the same execution endpoint:
+
+```http
+POST /execute
+Content-Type: application/json
+
 {
-  "manifestVersion": "1.0.0",
-  "generatedAt": "2026-03-11T12:34:26.260Z",
-  "app": { "name": "Fixture App", "version": "0.0.1" },
-  "discovery": {
-    "mode": "public",
-    "executionEndpoint": { "method": "POST", "path": "/execute" },
-    "capabilitiesEndpoint": { "method": "GET", "path": "/capabilities" }
-  },
-  "policy": {
-    "defaultVisibility": "internal",
-    "defaultRiskLevel": "medium",
-    "defaultConfirmationPolicy": "none",
-    "confirmationSupported": false
-  },
-  "interaction": {
-    "toolCalling": true,
-    "httpExecution": true,
-    "streaming": false
-  },
-  "capabilities": [
-    {
-      "id": "api.orders.list-orders",
-      "kind": "read",
-      "displayTitle": "List orders",
-      "inputSchema": { "type": "object", "properties": { "limit": { "type": "integer" } } },
-      "execution": { "mode": "http", "endpoint": { "method": "POST", "path": "/execute" } },
-      "policy": { "visibility": "public", "riskLevel": "low", "confirmationPolicy": "none" }
-    }
-  ]
+  "capabilityId": "projects.create",
+  "input": { "name": "Analytics" },
+  "context": { "mode": "public" }
 }
 ```
 
-## Execution endpoint reference
-- Все capabilities в well-known ссылаются на тот же `POST /execute`.
-- Агент обязан передавать `capabilityId` + `input` из schema.
-- Public mode автоматически запрещает destructive запросы (`allowDestructive=false`).
+Response:
 
-## Скрытые данные
-- handler references, diagnostics, путь к исходникам, приватные tags не публикуются.
-- Если capability требует внутренних permission scopes, она остаётся только в canonical manifest.
+```json
+{
+  "status": "success",
+  "data": { "id": "proj_123", "name": "Analytics" },
+  "traceId": "trc_abc"
+}
+```
 
-## Поток для внешнего агента
-1. GET `/.well-known/ai-capabilities.json` → получить manifestVersion, доступные capabilities, interaction hints.
-2. GET `/capabilities?visibility=public` при необходимости получить полные схемы.
-3. POST `/execute` с `context.mode="public"`.
-4. Интерпретировать `status`/`error` поля; `traceId` можно использовать для обращения к `/traces` (если сервер открыт).
+If a capability requires confirmation or is not public, the runtime rejects the request.
 
-## Ограничения
-- Нет auth/ratelimiting — предполагается, что сервер находится за доверенным прокси.
-- Manifest не версионируется по `ETag`; если нужна кэшируемость, добавьте свой слой поверх HTTP.
+## Tool-calling examples
+
+### OpenAI (conceptual)
+
+Provide the public manifest entry as a tool definition when creating an Assistant or Response:
+
+```json
+{
+  "type": "function",
+  "function": {
+    "name": "projects_create",
+    "description": "Creates a workspace project",
+    "parameters": { "$ref": "https://yourapp.com/.well-known/ai-capabilities.json#/capabilities/projects.create/inputSchema" }
+  }
+}
+```
+
+When OpenAI issues a tool call, forward it directly to `POST /execute`.
+
+### Claude (conceptual)
+
+Anthropic’s tool syntax mirrors OpenAI’s:
+
+```json
+{
+  "name": "projects_list",
+  "description": "List workspace projects",
+  "input_schema": { "...schema from public manifest..." }
+}
+```
+
+Map the tool invocation to `/execute` and return the runtime result as the tool output.
+
+### Custom/internal agents
+
+1. Fetch `/.well-known/ai-capabilities.json` on startup.
+2. Cache the execution endpoint + schemas.
+3. For each agent plan step, POST to `/execute`.
+4. Use `traceId` to correlate runtime traces or display audit logs.
+
+## Internal vs public workflow
+
+| Step | Internal agent | External agent |
+| --- | --- | --- |
+| Discovery | Canonical manifest or direct registry access | `.well-known` + `/capabilities?visibility=public` |
+| Execution | In-process runtime (`runtime.execute`) | HTTP `POST /execute` |
+| Policies | All levels (internal, public, hidden) | Only `visibility: "public"`; runtime enforces read-only mode |
+| Context | Router/UI adapters available | None (server-side only) |
+
+## Safety checklist
+
+- Review `policy.visibility`, `riskLevel`, and `confirmationPolicy` per capability before marking it public.
+- Maintain an allowlist of `capabilityId`s for your first pilot.
+- Log all `/execute` calls with `traceId` and `capabilityId`.
+- Use `npx ai-capabilities doctor --json` to confirm the project is at least `partially_executable` before exposing it externally.
+- Document your rate limiting/authentication in front of the runtime. (AI Capabilities’ server assumes you run inside a trusted environment.)

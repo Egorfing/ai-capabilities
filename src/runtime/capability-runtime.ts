@@ -171,7 +171,7 @@ export class CapabilityRuntime {
     }
 
     try {
-      const data = await handler(input);
+      const data = await handler(input, options.handlerContext);
       const result = this.buildSuccess(request, data, start);
       if (tw) {
         await tw.write(runtimeEvent(traceId, "execution.success", `Execution succeeded for "${capability.id}"`, {

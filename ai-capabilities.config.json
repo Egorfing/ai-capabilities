@@ -47,7 +47,7 @@
   "manifest": {
     "app": {
       "name": "Capability Engine Demo",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "Capability manifest for demo project",
       "baseUrl": "http://localhost:3000"
     },

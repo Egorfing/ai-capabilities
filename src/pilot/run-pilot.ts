@@ -116,7 +116,7 @@ export async function runPilot(options: PilotOptions = {}): Promise<PilotRunResu
           generatedAt: new Date().toISOString(),
           sourceProject: projectPath,
           extractors: pipelineResult.extractorsRun,
-          version: "0.1.0",
+          version: "0.2.0",
         },
         capabilities: mergeResult.capabilities,
       };

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { CapabilityRuntime } from "./capability-runtime.js";
 import { CapabilityRegistry } from "./capability-registry.js";
 import type {
@@ -50,7 +50,10 @@ const manifest: AiCapabilitiesManifest = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function registryWith(capId: string, handler: (input: Record<string, unknown>) => unknown) {
+function registryWith(
+  capId: string,
+  handler: (input: Record<string, unknown>, context?: Record<string, unknown>) => unknown,
+) {
   const registry = new CapabilityRegistry();
   registry.register(capId, handler);
   return registry;
@@ -130,6 +133,28 @@ describe("CapabilityRuntime", () => {
     );
     expect(result.status).toBe("denied");
     expect(result.error?.code).toBe("POLICY_DENIED");
+  });
+
+  it("passes handlerContext through to capability handler", async () => {
+    const spy = vi.fn();
+    const registry = registryWith("orders.create", async (input, context) => {
+      spy(context);
+      return { received: input.orderId, mode: context?.mode };
+    });
+    const runtime = new CapabilityRuntime({ manifest, registry });
+
+    const result = await runtime.execute(
+      createRequest({ orderId: "abc" }, { confirmed: true }),
+      {
+        handlerContext: { mode: "frontend", router: { navigate: (_path: string) => {} } },
+      },
+    );
+
+    expect(result.status).toBe("success");
+    expect(spy).toHaveBeenCalledWith({
+      mode: "frontend",
+      router: { navigate: expect.any(Function) },
+    });
   });
 });
 

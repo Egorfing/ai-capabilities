@@ -43,9 +43,21 @@ Runtime отвечает за безопасное исполнение capabili
 ```
 
 ## Binding стратегии
-- **Manual registry (по умолчанию):** вызываем `registry.register("capability.id", handler)` при инициализации runtime.
+- **Manual registry (по умолчанию):** вызываем `registry.register("capability.id", handler)` при инициализации runtime. Для DX используйте `defineCapability` + `registerCapabilityDefinitions`, чтобы автоматически пронести handler из декларативного описания (см. [define-capability.md](./define-capability.md)).
 - **HTTP binding (todo):** handler вызывает внешние API, используя `execution.endpoint` из manifest.
 - **Комбинированные:** можно регистрировать разные handlers для одного capability в зависимости от окружения.
+
+## Handler context
+Runtime может передать произвольный объект в handler через `handlerContext`. Например, локальный агент может дать доступ к `router` или `ui` адаптерам для frontend действий:
+```ts
+await runtime.execute(request, {
+  handlerContext: {
+    router: { navigate: (path) => appRouter.push(path) },
+    ui: { openModal: (id, payload) => modals.open(id, payload) },
+  },
+});
+```
+В handler это будет вторым аргументом `execute(input, ctx)`. Для рекомендаций по UI действиям см. [frontend-actions.md](./frontend-actions.md).
 
 ## Ошибки и policy
 - `POLICY_DENIED` — visibility mismatch, отсутствуют permission scopes или `allowDestructive=false` при `riskLevel=high`.

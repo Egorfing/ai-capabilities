@@ -3,6 +3,7 @@ export { CapabilityRuntime } from "./capability-runtime.js";
 export type { CapabilityRuntimeOptions } from "./capability-runtime.js";
 export type {
   CapabilityHandler,
+  CapabilityHandlerContext,
   CapabilityRuntimeExecuteOptions,
   ExecutionMode,
 } from "./runtime-types.js";

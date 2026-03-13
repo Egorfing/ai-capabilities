@@ -11,6 +11,9 @@ import { runValidate } from "./commands/validate.js";
 import { runTrace } from "./commands/trace.js";
 import { runPilotCommand } from "./commands/pilot.js";
 import { runInspectCommand } from "./commands/inspect.js";
+import { runInitCommand } from "./commands/init.js";
+import { runPromptCommand } from "./commands/prompt.js";
+import { runDoctorCommand } from "./commands/doctor.js";
 
 const MAIN_HELP = `
 capability-engine — AI Capability Extraction + Agent Runtime
@@ -25,6 +28,9 @@ Commands:
   inspect       Inspect canonical manifest summary
   validate      Validate a capability manifest
   trace list    List execution traces
+  init          Scaffold config + capability registry
+  prompt        Generate LLM prompt templates for capability completion
+  doctor        Diagnose project readiness and missing steps
 
 Options:
   --help        Show help for a command
@@ -37,6 +43,7 @@ Examples:
   capability-engine pilot -- --project ../my-app --with-enrich
   capability-engine trace list --limit 10
   capability-engine inspect --project ./my-app --public
+  capability-engine init
 `.trim();
 
 const parsed = parseArgs(process.argv);
@@ -63,6 +70,15 @@ async function main() {
       break;
     case "trace list":
       await runTrace(parsed);
+      break;
+    case "init":
+      await runInitCommand(parsed);
+      break;
+    case "prompt":
+      await runPromptCommand(parsed);
+      break;
+    case "doctor":
+      await runDoctorCommand(parsed);
       break;
     case "help":
     case "":
