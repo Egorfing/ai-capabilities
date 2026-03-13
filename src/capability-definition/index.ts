@@ -1,4 +1,5 @@
 export { defineCapability } from "./define-capability.js";
+export { defineCapabilityFromExtracted } from "./define-capability-from-extracted.js";
 export {
   capabilityDefinitionToRegistryEntry,
   registerCapabilityDefinitions,
@@ -13,4 +14,5 @@ export type {
   CapabilityExecutor,
   CapabilityPolicyDefinition,
 } from "./capability-definition-types.js";
+export type { ExtractedCapabilityDefinitionInput } from "./define-capability-from-extracted.js";
 export type { CapabilityRegistryLike } from "./capability-definition-to-registry.js";

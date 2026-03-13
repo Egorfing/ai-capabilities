@@ -32,4 +32,8 @@ export async function runInitCommand(args: ParsedArgs): Promise<void> {
   result.nextSteps.forEach((step, index) => {
     console.log(`  ${index + 1}. ${step}`);
   });
+
+  console.log("\nFolders:");
+  console.log("  src/ai-capabilities  → code you author and review");
+  console.log("  output/              → generated manifests (safe to delete, regenerate via npx ai-capabilities extract)");
 }

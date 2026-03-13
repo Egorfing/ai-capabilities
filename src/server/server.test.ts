@@ -90,7 +90,10 @@ async function createContext(options: {
   });
 
   const runtimeExecute = vi.fn(options.runtimeImpl ?? defaultExecute);
-  const runtime: CapabilityRuntimeInterface = { execute: runtimeExecute };
+  const runtime: CapabilityRuntimeInterface = {
+    execute: runtimeExecute,
+    getManifest: () => manifest,
+  };
 
   const state: ServerState = {
     manifest,

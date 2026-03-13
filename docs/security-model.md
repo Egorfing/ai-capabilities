@@ -7,12 +7,12 @@ AI Capabilities exposes real application actions. Every capability must carry po
 | Visibility | Who sees it | Typical use | Notes |
 | --- | --- | --- | --- |
 | `internal` | In-app or trusted agents only | Default for most capabilities, especially during pilots | Appears in canonical manifest but is omitted from the public manifest unless you explicitly include it. |
-| `public` | External agents via `/.well-known/ai-capabilities.json` | Read-only or carefully hardened actions you want 3rd-party agents to call | Requires a curated allowlist and ongoing monitoring. |
+| `public` | External agents via `/.well-known/ai-capabilities.json` | Read-only or carefully hardened actions you want 3rd-party agents to call | Requires a curated allowlist and ongoing monitoring; this endpoint acts like `robots.txt`/`sitemap.xml` for executable actions. |
 | `hidden` | Not discoverable by agents | Temporary/internal utilities, manual testing hooks | Remains executable inside your runtime, but omitted from manifests so AI tooling cannot see it. |
 
 **Guidance**
 - Start with `visibility: "internal"` for all capabilities.
-- Promote to `public` only after you have confirmation policies and monitoring in place.
+- Promote to `public` only after you have confirmation policies and monitoring in place—whatever lands in `/.well-known/ai-capabilities.json` becomes part of your public discovery contract.
 - Use `hidden` for destructive actions that engineers must trigger manually.
 
 ## Risk levels (`riskLevel`)

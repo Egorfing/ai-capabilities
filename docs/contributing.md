@@ -20,6 +20,17 @@ Always run `npm test` before pushing; the Vitest suite catches regressions in CL
 3. **Maintain golden fixtures** — if extraction output changes, regenerate via `npm run pilot` and update the corresponding files in `fixtures/golden`.
 4. **Respect policy defaults** — new capabilities/examples should default to `visibility: "internal"`, `riskLevel: "low"`, `confirmationPolicy: "none"`.
 
+## Public API / export checklist
+Every developer-facing helper must stay importable from the package root (`import { ... } from "ai-capabilities"`). When you introduce or update a public API:
+
+1. **Source export** — add the symbol to `src/index.ts` (don’t rely on deep imports).
+2. **Build artifacts** — run `npm run build` so `dist/index.js` and `dist/index.d.ts` include the change.
+3. **Package metadata** — confirm `package.json` `exports`, `main`, and `types` resolve to the built entry.
+4. **Smoke tests** — extend `src/public-api/*.test.ts` if the symbol is new so we catch regressions via `npm test`.
+5. **Docs** — document the new import in `docs/public-api.md` (or the doc that mentions the helper).
+
+If a helper shouldn’t be public, keep it undocumented and avoid exporting it from the root.
+
 ## Adding a new extractor
 1. Create `src/extractors/<name>.ts` exporting an `Extractor` (see existing modules for shape).
 2. Register it inside `src/extractors/index.ts` so CLI commands pick it up.
@@ -33,10 +44,11 @@ Always run `npm test` before pushing; the Vitest suite catches regressions in CL
 - Cross-link from README’s “Documentation map” so newcomers can discover the new page.
 - Add troubleshooting entries to `docs/faq.md` whenever you fix a user-facing issue.
 - For workflow walkthroughs (init → extract → doctor), update `docs/happy-path.md`, `docs/demo-scenario.md`, or `scripts/demo-run.md` as appropriate.
+- Keep onboarding references in sync: `docs/llm-onboarding-workflow.md`, `docs/agents-workflow.md`, and `docs/llm-prompt.md` should always reflect the latest recommended flow and helper commands.
 
 ## Adding example capabilities or runtime wiring
 1. Follow the pattern in `examples/react-app/src/ai-capabilities/capabilities/`.
-2. Use `defineCapability` so schema, policy, and handler stay in one file.
+2. Use `defineCapability` for net-new actions, or `defineCapabilityFromExtracted` when promoting a capability discovered via `inspect`/`extract` so `metadata.extractedSourceId` stays linked.
 3. Update `examples/react-app/src/ai-capabilities/registry.ts` to register the new capability.
 4. If the runtime needs new adapters (router/ui/notify), extend `examples/react-app/src/agent/runtime.ts`.
 5. Document the new capability in the example README and, if it demonstrates a concept (e.g., chaining), add a dedicated doc such as `docs/capability-chaining.md`.

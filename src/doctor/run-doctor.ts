@@ -221,6 +221,7 @@ function analyzeManifest(manifest: AiCapabilitiesManifest): DoctorCapabilityStat
   let publicCount = 0;
   let confirmationRequired = 0;
   let highRisk = 0;
+  const unboundIds: string[] = [];
 
   for (const cap of manifest.capabilities) {
     byKind[cap.kind] = (byKind[cap.kind] ?? 0) + 1;
@@ -235,7 +236,10 @@ function analyzeManifest(manifest: AiCapabilitiesManifest): DoctorCapabilityStat
     }
     const resolution = resolver.resolve(cap.id);
     if (resolution.ok) executable += 1;
-    else unbound += 1;
+    else {
+      unbound += 1;
+      unboundIds.push(cap.id);
+    }
   }
 
   return {
@@ -247,6 +251,7 @@ function analyzeManifest(manifest: AiCapabilitiesManifest): DoctorCapabilityStat
     unbound,
     confirmationRequired,
     highRisk,
+    unboundIds,
   };
 }
 
@@ -291,6 +296,13 @@ function buildSafetyWarnings(stats?: DoctorCapabilityStats, manifest?: AiCapabil
   }
   if (stats.executable === 0) {
     warnings.push("All capabilities appear unbound. Define execution handlers or runtime bindings.");
+  }
+  if (stats.unbound > 0) {
+    const samples = (stats.unboundIds ?? []).slice(0, 3);
+    const hint = samples.length > 0 ? ` (e.g., ${samples.join(", ")})` : "";
+    warnings.push(
+      `Capabilities detected but not executable${hint}. Suggested next step: npx ai-capabilities scaffold --id <capability-id>.`,
+    );
   }
   return warnings;
 }

@@ -29,6 +29,7 @@ export interface DoctorCapabilityStats {
   publicCount: number;
   executable: number;
   unbound: number;
+  unboundIds: string[];
   confirmationRequired: number;
   highRisk: number;
 }

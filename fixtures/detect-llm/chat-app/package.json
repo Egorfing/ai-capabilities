@@ -1,0 +1,9 @@
+{
+  "name": "chat-app",
+  "version": "0.0.1",
+  "dependencies": {
+    "react": "18.0.0",
+    "openai": "4.0.0",
+    "@ai-sdk/openai": "0.1.0"
+  }
+}

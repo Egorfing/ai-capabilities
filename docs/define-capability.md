@@ -1,6 +1,14 @@
 # defineCapability helper
 
-`defineCapability` — тонкий слой DX, который объединяет схему, metadata и handler в одном файле. Он не меняет runtime/manifest архитектуру, а помогает разработчикам быстрее описать capability и зарегистрировать её в `CapabilityRegistry`.
+`defineCapability` — тонкий слой DX, который объединяет схему, metadata и handler в одном файле. Он не меняет runtime/manifest архитектуру, а помогает разработчикам быстрее описать capability и зарегистрировать её в `CapabilityRegistry`. Для случаев, когда вы начинаете с уже извлечённого хука (`hook.create-project-mutation`), используйте `defineCapabilityFromExtracted` — он повторно использует все поля helper-а, но дополнительно сохраняет `sourceId` в `metadata.extractedSourceId`, чтобы вы никогда не потеряли связь с исходной находкой `inspect/extract`.
+
+## Authoring standard
+- **Discovery vs execution:** `inspect`/`extract` tell you what exists, but only `defineCapability*` files describe what the agent is allowed to execute. Treat these helpers as the official DSL for executable capabilities.
+- **Traceability:** `defineCapabilityFromExtracted` keeps `sourceId` so you can cite the original hook (openapi operation, React Query hook, etc.) inside manifests, documentation, and AGENTS workflows.
+- **Consistency:** Every capability under `src/ai-capabilities/**` should follow one of these helpers so schemas, policies, and handlers stay reviewable and easy for LLMs to understand.
+- **Tooling:** `npx ai-capabilities scaffold` and `npx ai-capabilities auto-bind` both emit files that already use these helpers; adopt the same pattern for manual authoring.
+
+Philosophy: extracted capabilities describe *what the app exposes internally*, whereas authored capabilities describe *what the AI agent is trusted to execute*. The helpers bridge that gap.
 
 ## Когда использовать
 - вы описываете capability вручную и хотите держать schema + policy + handler рядом;
@@ -71,6 +79,80 @@ export const projectsCreateCapability = defineCapability({
   }
 });
 ```
+
+## Промоут извлечённой capability
+Если `inspect` показал `hook.create-project-mutation`, не нужно переписывать всё с нуля:
+
+```ts
+import { defineCapabilityFromExtracted } from "ai-capabilities";
+import { projectApi } from "../services/projectApi";
+
+export const projectsCreateCapability = defineCapabilityFromExtracted({
+  sourceId: "hook.create-project-mutation",
+  id: "projects.create",
+  displayTitle: "Create project",
+  description: "Creates a workspace project and returns its identifier.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      name: { type: "string", minLength: 3 },
+      description: { type: "string" },
+    },
+    required: ["name"],
+  },
+  policy: {
+    visibility: "internal",
+    riskLevel: "medium",
+    confirmationPolicy: "once",
+  },
+  async execute({ name, description }) {
+    return projectApi.create({ name, description });
+  },
+});
+```
+
+`defineCapabilityFromExtracted` автоматически добавляет `metadata.extractedSourceId`, благодаря чему любой runtime/manifest/документация могут отследить связь с исходным hook'ом.
+
+### Read-capability пример (`hook.projects-query`)
+```ts
+import { defineCapabilityFromExtracted } from "ai-capabilities";
+import { projectApi } from "../services/projectApi";
+
+export const projectsListCapability = defineCapabilityFromExtracted({
+  sourceId: "hook.projects-query",
+  id: "projects.list",
+  displayTitle: "List projects",
+  description: "Lists the visible projects for the current user.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      limit: { type: "number", minimum: 1, maximum: 100, default: 20 }
+    }
+  },
+  policy: {
+    visibility: "internal",
+    riskLevel: "low",
+    confirmationPolicy: "none"
+  },
+  async execute({ limit = 20 }: { limit?: number }) {
+    return projectApi.list({ limit });
+  }
+});
+```
+
+## Генерация scaffold через CLI
+Когда `inspect`/`extract` показывают нужный hook, запустите:
+```bash
+npx ai-capabilities scaffold --id hook.create-project-mutation
+```
+Опциональные флаги:
+- `--manifest ./output/ai-capabilities.json` — использовать конкретный canonical manifest.
+- `--dir ./src/ai-capabilities/capabilities` — контролировать директорию для файлов.
+
+Команда создаёт файл вроде `createProjectCapability.ts`, сразу подключает `defineCapabilityFromExtracted`, копирует `displayTitle`/`description`/`schema`, добавляет `metadata.extractedSourceId` и оставляет `execute` с понятным TODO. После генерации:
+1. Обновите `id` на канонический (`projects.create`).
+2. Допишите `execute`.
+3. Зарегистрируйте capability через `registerCapabilityDefinitions`.
 
 ## Регистрация в runtime
 ```ts

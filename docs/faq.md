@@ -2,6 +2,8 @@
 
 Use this reference whenever `doctor`, `inspect`, or your UI shows unexpected behavior. Copy/paste solutions into your workflow and rerun the CLI commands to verify the fix.
 
+For guided onboarding see [docs/happy-path.md](./happy-path.md) and [docs/llm-onboarding-workflow.md](./llm-onboarding-workflow.md). For prompt templates jump to [docs/llm-prompt.md](./llm-prompt.md), and keep [README.md](../README.md) handy for the overall CLI map.
+
 ## Getting Started Issues
 
 **Q: `npx ai-capabilities doctor` says “Not initialized”.**
@@ -19,6 +21,19 @@ Use this reference whenever `doctor`, `inspect`, or your UI shows unexpected beh
   npx ai-capabilities extract
   npx ai-capabilities doctor
   ```
+
+**Q: Why do I have both \`src/ai-capabilities\` and \`output/\` directories?**
+- **Answer:** They serve different purposes:
+  - `src/ai-capabilities/**/*` is authored code—capability definitions, registries, runtime helpers, and frontend adapters that you own and review.
+  - `output/**/*` is generated data—manifests, diagnostics, and traces produced by CLI commands (`extract`, `inspect`, `enrich`, `trace`). Delete/regenerate these instead of editing them manually.
+- **Workflow:** Run `extract`/`inspect` to populate `output/`, pick the extracted ids you care about, then convert them into executable code under `src/ai-capabilities` (often via `defineCapabilityFromExtracted` or the `scaffold` command).
+
+**Q: Can I generate safe capability files in bulk?**
+- **Answer:** Yes. Use the auto-bind helper:
+  ```bash
+  npx ai-capabilities auto-bind --manifest ./output/ai-capabilities.json --dir ./src/ai-capabilities/auto --dry-run
+  ```
+  Review the plan, rerun without `--dry-run`, then register the generated files (they land in `src/ai-capabilities/auto/`). Auto-bind only targets safe reads and create/update mutations and skips destructive IDs so you can scaffold those manually.
 
 ## Extraction Issues
 

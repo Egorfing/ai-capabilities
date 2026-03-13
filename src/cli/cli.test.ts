@@ -24,9 +24,16 @@ const run = (...args: string[]) => {
 };
 
 describe("CLI integration", () => {
-  it("shows help when no command given", () => {
+  it("runs quick scan when no command is given", () => {
     const r = run();
-    expect(r.code).toBe(1);
+    expect(r.code).toBe(0);
+    expect(r.output).toContain("AI Capabilities quick scan");
+    expect(r.output).toContain("Safe auto-bind candidates");
+  });
+
+  it("shows help when only --help flag is provided", () => {
+    const r = run("--help");
+    expect(r.code).toBe(0);
     expect(r.output).toContain("capability-engine");
     expect(r.output).toContain("Commands:");
   });
@@ -47,6 +54,18 @@ describe("CLI integration", () => {
     const r = run("extract", "--help");
     expect(r.code).toBe(0);
     expect(r.output).toContain("--project");
+  });
+
+  it("scaffold --help shows usage", () => {
+    const r = run("scaffold", "--help");
+    expect(r.code).toBe(0);
+    expect(r.output).toContain("capability-engine scaffold");
+  });
+
+  it("detect-llm --help shows usage", () => {
+    const r = run("detect-llm", "--help");
+    expect(r.code).toBe(0);
+    expect(r.output).toContain("capability-engine detect-llm");
   });
 
   it("validate works on raw manifest", () => {

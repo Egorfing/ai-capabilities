@@ -31,6 +31,11 @@ export interface CapabilityQuery {
 }
 
 export async function readJsonBody(req: IncomingMessage, limit = BODY_LIMIT_BYTES): Promise<unknown> {
+  const existingBody = (req as any).body;
+  if (existingBody !== undefined) {
+    return normalizePrefilledBody(existingBody);
+  }
+
   const chunks: Buffer[] = [];
   let total = 0;
   for await (const chunk of req) {
@@ -54,6 +59,29 @@ export async function readJsonBody(req: IncomingMessage, limit = BODY_LIMIT_BYTE
   } catch {
     throw new HttpError(400, "INVALID_JSON", "Request body must be valid JSON");
   }
+}
+
+function normalizePrefilledBody(body: unknown): unknown {
+  if (Buffer.isBuffer(body)) {
+    const raw = body.toString("utf-8");
+    if (!raw.trim()) return {};
+    try {
+      return JSON.parse(raw);
+    } catch {
+      throw new HttpError(400, "INVALID_JSON", "Request body must be valid JSON");
+    }
+  }
+
+  if (typeof body === "string") {
+    if (!body.trim()) return {};
+    try {
+      return JSON.parse(body);
+    } catch {
+      throw new HttpError(400, "INVALID_JSON", "Request body must be valid JSON");
+    }
+  }
+
+  return body;
 }
 
 export function parseExecutePayload(body: unknown): ExecutePayload {

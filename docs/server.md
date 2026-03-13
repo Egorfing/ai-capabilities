@@ -80,3 +80,46 @@ npm run serve -- --config ... --public # public mode
 ```
 
 Сервер не включает auth/rate limiting и предназначен для локальных/внутренних сетей.
+
+## Express / Node middleware
+Если у вас уже есть Express-приложение и не хочется поднимать отдельный HTTP server, используйте `createAiCapabilitiesMiddleware` из `ai-capabilities/server`:
+
+```ts
+import express from "express";
+import { CapabilityRuntime } from "ai-capabilities";
+import { createAiCapabilitiesMiddleware } from "ai-capabilities/server";
+
+const runtime = new CapabilityRuntime({ manifest, registry, mode: "public" });
+const app = express();
+
+app.use(
+  createAiCapabilitiesMiddleware({
+    runtime,
+    manifest,
+    mode: "public",
+    basePath: "/ai", // опционально (по умолчанию корень)
+  }),
+);
+
+app.listen(3000);
+```
+
+Мидлвар автоматически экспонирует:
+
+- `GET /.well-known/ai-capabilities.json` (или `/ai/.well-known/...` при `basePath`).
+- `GET /capabilities` — canonical manifest (в public mode автоматически фильтруется).
+- `POST /execute` — делегирует в `CapabilityRuntime`.
+
+Опции:
+
+| Параметр | Обязателен | Описание |
+| --- | --- | --- |
+| `runtime` | ✅ | Готовый `CapabilityRuntime`. |
+| `manifest` | ✅\* | Canonical manifest. Если не передать, будет вызван `runtime.getManifest()`. |
+| `manifestProvider` | ❌ | Альтернатива `manifest` — функция, возвращающая manifest на каждый запрос. |
+| `publicManifest` | ❌ | Предподготовленный public manifest (иначе формируется на лету). |
+| `mode` | ❌ | `"internal"` (по умолчанию) или `"public"`. |
+| `basePath` | ❌ | Префикс маршрутов (`/ai`, `/internal/tools`, и т.п.). |
+| `jsonBodyLimit` | ❌ | Лимит на размер JSON (по умолчанию 1 МБ). |
+
+Пример (`examples/express-app`) регистрирует безопасный read-capability `api.orders.list-orders`, монтирует middleware в public режиме и демонстрирует полную цепочку discovery → execution с помощью клиентского SDK.

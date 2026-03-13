@@ -39,9 +39,9 @@ describe("initProject", () => {
   it("records next steps for CLI summary", async () => {
     const dir = setupDir();
     const result = await initProject({ cwd: dir });
-    expect(result.nextSteps.length).toBeGreaterThanOrEqual(3);
-    expect(result.nextSteps[0]).toContain("ai-capabilities.config.json");
-    expect(result.nextSteps.some((step) => step.includes("inspect"))).toBe(true);
+    expect(result.nextSteps.length).toBeGreaterThanOrEqual(4);
+    expect(result.nextSteps[0]).toContain("Inspect your project");
+    expect(result.nextSteps.some((step) => step.includes("scaffold"))).toBe(true);
   });
 
   it("injects detected project name into config", async () => {

@@ -25,7 +25,7 @@ User → Local agent → Capability runtime → Application data/UI
 | 4 | Result handling | The agent logs the result, replies in chat, and immediately runs `navigation.open-project-page` with the new ID. | `executePlan` in `localAgent.ts` |
 | 5 | UI feedback | The runtime injects router/ui adapters so the navigation capability pushes the new route and triggers a toast. | `examples/react-app/src/agent/runtime.ts` + `AiChat.tsx` |
 
-Console output (abridged):
+Expected console output:
 
 ```
 [agent] intent=createProject name=Analytics
@@ -43,3 +43,14 @@ Console output (abridged):
 4. Watch the chat transcript plus console logs that list each capability invocation.
 
 For more guided onboarding see [docs/happy-path.md](./happy-path.md). When you are ready to connect a real model, swap the deterministic agent for your LLM interface while keeping the same capabilities and runtime.
+
+## Public discovery variant
+If you expose the runtime over HTTP, an external agent would follow this minimal loop:
+
+1. `GET https://app.example.com/.well-known/ai-capabilities.json` – discover every public capability (similar spirit to `robots.txt` or `openapi.json`).
+2. Parse `projects.create`, note its schema/policy, and register it as a tool/function.
+3. When the user asks “Create a project called Analytics”, the agent validates the payload against the schema.
+4. `POST https://app.example.com/execute` with `{ "capabilityId": "projects.create", "input": { "name": "Analytics" } }`.
+5. Handle the runtime response and continue the conversation.
+
+Internal-only actions stay in the canonical manifest, so you can run the local demo while treating `/.well-known` as the formal discovery bridge for partner agents.

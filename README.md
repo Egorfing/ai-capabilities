@@ -1,11 +1,11 @@
 # AI Capabilities
-Expose real application actions to AI agents safely.
+Expose real application actions (APIs, UI flows, background jobs) to AI agents safely through a structured capability layer.
 
-Turn any application into an AI-compatible system where agents can safely execute real actions—from backend APIs to navigation flows—through a single capability layer.
+Turn any application into an AI-executable system where agents can safely execute real actions—from backend APIs to navigation flows—through a single capability layer.
 
 ## Why AI Capabilities exists
 
-Modern applications are full of actions that humans perform every day (API handlers, background jobs, UI flows), but LLMs cannot discover or safely execute them. Tool-calling is fragile, UI actions and backend actions live in separate worlds, and there is no structured capability layer for AI agents.
+Modern applications already ship countless executable actions—API endpoints, mutations, background jobs, UI flows—yet AI agents cannot reliably discover or safely trigger them. Tool-calling is fragile, UI actions and backend actions live in separate worlds, and there is no structured capability layer for AI agents.
 
 AI Capabilities solves this by:
 
@@ -15,13 +15,15 @@ AI Capabilities solves this by:
 - Unifying backend APIs, UI/navigation flows, and policy controls in one place.
 
 **What you get immediately**
-- Capability extraction pipeline (OpenAPI, React Query, Router, Form).
-- Canonical & public manifests.
-- AI tool adapters (OpenAI, Anthropic, internal).
-- Capability runtime + policy layer.
-- Public discovery endpoint (`/.well-known/ai-capabilities.json`).
+- Automatic capability extraction from source code (OpenAPI, React Query, Router, Form).
+- Canonical capability manifests with schemas, metadata, and policy.
+- A capability runtime + policy layer that executes actions safely.
+- AI tool adapters (OpenAI, Anthropic, internal agents).
+- A discovery endpoint (`/.well-known/ai-capabilities.json`).
 
 See [docs/architecture.md](docs/architecture.md) for the full flow.
+
+Here is the “aha moment”: a single user request can trigger both backend and UI capabilities.
 
 ## Demo: Create & open a project (aha moment)
 
@@ -36,50 +38,64 @@ Result:
 ```
 
 This deterministic agent lives in `examples/react-app`. Run it with `cd examples/react-app && npm install && npm run dev`, then type the prompt above to watch `[agent]` and `[runtime]` logs show the chained capabilities.
+More scripted walkthroughs live in [docs/demo.md](docs/demo.md).
 
-## Architecture overview
+## How it works
 
 ```
-┌──────────┐   ┌─────────────┐   ┌─────────────┐   ┌────────────┐   ┌──────────────┐
-│  Source  │→ │  Extraction  │→ │  Manifest    │→ │  Runtime &  │→ │  Agents / LLM │
-│  code    │   │  & merge     │   │  builder    │   │  registry   │   │  tool calls   │
-└──────────┘   └─────────────┘   └─────────────┘   └────────────┘   └──────────────┘
-      ▲               │                │                  │                    │
-      │               │                │                  │                    │
-      │               ▼                ▼                  ▼                    │
-      │        `capabilities.raw.json` │         `ai-capabilities.json`        │
-      │                                ▼                                       │
-      │                         Public manifest                                │
-      │                                │                                       │
-      └─────────────────────────────── UI/runtime bindings ↔ Frontend actions ─┘
+Your application code
+        ↓
+ai-capabilities inspect
+        ↓
+ai-capabilities extract
+        ↓
+output/ capability manifest
+        ↓
+ai-capabilities scaffold
+        ↓
+src/ai-capabilities executable actions
+        ↓
+CapabilityRuntime
+        ↓
+AI agent / chat / server tools
 ```
 
-1. **Extractors** read your code and produce diagnostic-rich raw capabilities.
-2. **Manifest builder** normalizes/merges data into canonical & public JSON files.
-3. **Runtime & registry** register handlers via `defineCapability` and enforce policy.
-4. **Server & well-known** expose `/execute`, `/capabilities`, and `/.well-known/ai-capabilities.json`.
-5. **Agents / LLMs** consume the manifest as tool definitions and call capabilities over HTTP or local bindings.
+- `output/` stores the generated manifest family (`ai-capabilities*.json`) and diagnostics.
+- `src/ai-capabilities/` is where you keep the developer-authored actions that scaffolds create.
+- `CapabilityRuntime` exposes only the capabilities you register, so agents/chats/server tools stay within the safe surface.
+- Agents never call your application APIs directly—they call capabilities exposed by the runtime.
 
 ## Quickstart (10 minutes)
 
 > Copy/paste commands. Every step works with humans _and_ coding assistants.
 
 ```bash
-npm install                         # install dependencies
-npx ai-capabilities init            # create ai-capabilities.config.json + scaffold
-npx ai-capabilities inspect         # list extractable actions
-npx ai-capabilities extract         # build raw + canonical + public manifests
-npx ai-capabilities doctor          # readiness & safety report
-npx ai-capabilities serve           # expose runtime + .well-known endpoint
+npm install ai-capabilities
+npx ai-capabilities init
+npx ai-capabilities inspect
+npx ai-capabilities extract
+npx ai-capabilities doctor
+npx ai-capabilities serve
 ```
 
-After running the quickstart you will have:
+After these steps your application exposes a capability runtime and a discovery endpoint. You will have:
 
 - `output/capabilities.raw.json` and `output/ai-capabilities.json`.
 - `output/ai-capabilities.public.json` for external agents.
 - `output/ai-capabilities.enriched.json` (after `enrich`).
 - A running capability runtime on `localhost:4000` with `/\.well-known/ai-capabilities.json`.
 - Confirmation that UI/Router adapters are wired (see [Frontend/UI capabilities](#runtime--frontend-actions)).
+- Full walkthrough: [docs/quickstart.md](docs/quickstart.md).
+
+### Zero-config quick scan
+
+Run a full doctor → inspect → extract → detect-llm → `auto-bind --dry-run` pipeline (without touching your source code) via:
+
+```bash
+npx ai-capabilities
+```
+
+The command prints capability counts, safe auto-bind candidates, high-risk operations, and recommended next steps so you know exactly what to do next.
 
 ### Example CLI output
 
@@ -118,107 +134,242 @@ The example includes:
 
 Use it alongside [docs/happy-path.md](docs/happy-path.md) and [docs/file-structure.md](docs/file-structure.md) to copy the pattern into your app.
 
+## Discovery standard
+AI Capabilities formalizes a discovery contract for applications: serve a curated `/.well-known/ai-capabilities.json` (filtered to public visibility) so external agents can learn what your app can do. Think of it as `robots.txt + sitemap.xml + openapi.json` for AI-executable actions—agents fetch it to inspect capability IDs, schemas, and policies before calling your runtime. Keep destructive/internal actions out of this surface (leave them `internal`/`hidden`) so the well-known endpoint remains a safe bridge between your application and AI tools. See [docs/external-agents.md](docs/external-agents.md) and [docs/standardization.md](docs/standardization.md) for the full playbook.
+
+### Consumer-side client SDK
+External AI agents and integrations no longer need to hand-roll HTTP calls. The package now includes a tiny client entrypoint (`ai-capabilities/client`) with discovery + execution helpers:
+
+```ts
+import { discoverCapabilities, executeCapability } from "ai-capabilities/client";
+
+const { manifest, getCapabilityById } = await discoverCapabilities("https://app.example.com");
+const listOrders = getCapabilityById("api.orders.list-orders");
+
+if (listOrders) {
+  const result = await executeCapability("https://app.example.com", listOrders.id, { limit: 5 });
+  console.log(result.status, result.data);
+}
+```
+
+- `getWellKnownManifest(baseUrl)` — fetches `/.well-known/ai-capabilities.json`.
+- `discoverCapabilities(baseUrl)` — wraps the manifest plus helper lookups for capability IDs.
+- `executeCapability(baseUrl, capabilityId, input)` — POSTs to `/execute` and returns the runtime result (including policy denials).
+
+Each helper accepts optional headers/signals plus a `fetch` override so you can reuse it from Node, browsers, or edge runtimes. See [docs/external-agents.md](docs/external-agents.md#client-sdk-quickstart) for details.
+
+### Express / Node middleware
+Need a production-ready Express path without writing custom routers? Mount the runtime with the new helper exported from `ai-capabilities/server`:
+
+```ts
+import express from "express";
+import { CapabilityRuntime } from "ai-capabilities";
+import { createAiCapabilitiesMiddleware } from "ai-capabilities/server";
+
+const runtime = new CapabilityRuntime({ manifest, registry, mode: "public" });
+const app = express();
+
+app.use(
+  createAiCapabilitiesMiddleware({
+    runtime,
+    manifest,
+    mode: "public",
+    basePath: "/ai-capabilities", // optional
+  }),
+);
+
+app.listen(3000, () => console.log("Discovery ready on http://localhost:3000/ai-capabilities/.well-known/ai-capabilities.json"));
+```
+
+The middleware automatically wires:
+
+- `GET /.well-known/ai-capabilities.json` (or `/ai-capabilities/.well-known/...` when `basePath` is set) backed by your public manifest.
+- `GET /capabilities` for canonical manifest access (filtered when `mode: "public"`).
+- `POST /execute` delegating to your `CapabilityRuntime`.
+
+Check out [examples/express-app](examples/express-app) for a runnable sample that:
+
+1. Registers a safe read capability (`api.orders.list-orders`) with fake order data.
+2. Mounts the middleware in public mode.
+3. Uses the client SDK to discover capabilities and execute the read operation.
+
+Docs: [docs/server.md](docs/server.md#express--node-middleware).
+
+## Authoring standard
+Extracted manifests describe what exists in your code; authored capability files describe what agents are allowed to execute. The recommended authoring API is `defineCapability`/`defineCapabilityFromExtracted`—a stable DSL for executable actions that keeps schemas, policy, and handlers in one place.
+
+```ts
+import { defineCapabilityFromExtracted } from "ai-capabilities";
+
+export const createProjectCapability = defineCapabilityFromExtracted({
+  sourceId: "hook.create-project-mutation",
+  id: "projects.create",
+  displayTitle: "Create project",
+  description: "Creates a new project",
+  inputSchema: {
+    type: "object",
+    properties: {
+      name: { type: "string" }
+    },
+    required: ["name"]
+  },
+  policy: {
+    visibility: "internal",
+    riskLevel: "medium",
+    confirmationPolicy: "once"
+  },
+  aliases: ["create project", "new project"],
+  exampleIntents: ["Create a project called Analytics"],
+  async execute(input) {
+    // Call your application/services here.
+  },
+});
+```
+
+- Use `defineCapabilityFromExtracted` when promoting a hook/endpoint discovered by `inspect`/`extract`—it preserves `sourceId` so you can trace the lineage.
+- Use `defineCapability` when authoring UI/navigation actions or bespoke server operations from scratch.
+- Keep all executable code under `src/ai-capabilities/**` (or `src/ai-capabilities/auto/**` when using `auto-bind`) and register everything via `registerCapabilityDefinitions`.
+
+See [docs/define-capability.md](docs/define-capability.md) and [docs/standardization.md](docs/standardization.md) for the authoring philosophy.
+
+## For AI coding assistants
+If you're integrating AI Capabilities via Codex, Cursor, Claude Code, or similar tools:
+- Run `npx ai-capabilities doctor`, `inspect --project .`, `extract --project .`, and `detect-llm --project .` before asking the developer additional questions.
+- Prefer `npx ai-capabilities auto-bind --dry-run` for safe reads/creates, then scaffold higher-risk IDs with `npx ai-capabilities scaffold --id ...` for manual review.
+- Implement handlers with `defineCapabilityFromExtracted` (or `defineCapability` for net-new actions) to stay on the authoring standard.
+- Reuse any existing chat/LLM/runtime stack detected by `detect-llm`; do not introduce a second surface unless confirmed.
+- Keep destructive capabilities internal/hidden until the developer explicitly approves exposing them.
+- Follow [AGENTS.md](AGENTS.md) plus [docs/agent-installer-workflow.md](docs/agent-installer-workflow.md) for the canonical diagnose → summarize → ask → generate → integrate → summarize loop.
+- Policy deep dive: [docs/policy.md](docs/policy.md).
+
+## Onboarding CLI quick start
+Run these commands in order before asking more questions:
+
+```bash
+npx ai-capabilities doctor
+npx ai-capabilities inspect
+npx ai-capabilities extract
+npx ai-capabilities detect-llm
+npx ai-capabilities scaffold --id <capability-id>
+npx ai-capabilities auto-bind --dry-run
+```
+
+Discover extracted capability IDs at any time with:
+
+```bash
+npx ai-capabilities scaffold --list
+```
+
+Running `npx ai-capabilities scaffold` without `--id` now opens a numbered picker in interactive terminals so you can select an entry instead of copying the ID by hand. Non-interactive shells (CI, scripts) continue to print the list and exit so they stay deterministic.
+
+Prefer `auto-bind` when you want to generate conservative `defineCapabilityFromExtracted` files for safe read/create operations in bulk. Use `--dry-run` to preview the plan, then review `src/ai-capabilities/auto/*.ts` before registering them.
+
+Then register the generated capability in `src/ai-capabilities/registry.ts` and wire it into your runtime/chat surface.
+
+Need to validate the full pilot experience? Follow [docs/pilot.md](docs/pilot.md) for extraction + enrichment drills.
+
+Need more context? Follow [docs/happy-path.md](docs/happy-path.md) for the human workflow, [docs/llm-onboarding-workflow.md](docs/llm-onboarding-workflow.md) for coding assistants, [docs/llm-prompt.md](docs/llm-prompt.md) for capability-level prompts, and [docs/faq.md](docs/faq.md) for troubleshooting.
+
 ## Core concepts
 
 ### Capabilities & helper API
 
-`defineCapability` keeps schema, metadata, policy, and handler in one file. Scaffolded structure:
+`defineCapability` keeps schema, metadata, policy, and handler in one file. Use it for net-new capabilities you author from scratch. When you start from an extracted item (e.g., `hook.create-project-mutation`) use `defineCapabilityFromExtracted` to keep the source linkage visible while providing a real handler. Both helpers emit the same runtime-ready shape, so you can mix them freely.
 
-```
-src/
-  ai-capabilities/
-    index.ts          # runtime entry point
-    registry.ts       # registers capabilities with CapabilityRegistry
-    capabilities/
-      createProject.ts
-ai-capabilities.config.json
-```
-
-Running `npx ai-capabilities init` creates:
-
-- `ai-capabilities.config.json` — project metadata, include/exclude rules, output paths.
-- `src/ai-capabilities/index.ts` — re-export hub for registry/capability folders.
-- `src/ai-capabilities/registry.ts` — registers capability definitions.
-- `src/ai-capabilities/capabilities/exampleCapability.ts` — example action you can delete.
-
-Example config:
-
-```json
-{
-  "project": { "root": "." },
-  "paths": {
-    "include": ["src/**/*"],
-    "exclude": [".claude/**", "node_modules/**", "dist/**", "output/**"]
-  },
-  "output": {
-    "raw": "./output/capabilities.raw.json",
-    "enriched": "./output/capabilities.enriched.json",
-    "canonical": "./output/ai-capabilities.json",
-    "public": "./output/ai-capabilities.public.json",
-    "diagnostics": "./output/diagnostics.log",
-    "tracesDir": "./output/traces"
-  },
-  "extractors": {
-    "openapi": {},
-    "reactQuery": {},
-    "router": {},
-    "form": {}
-  },
-  "manifest": { "app": { "name": "App" } }
-}
-```
-
-Example scaffolded capability:
+## Public API
+Import everything from the package root:
 
 ```ts
-export const exampleCapability = {
-  id: "example.echo",
-  title: "Echo sample text",
-  description: "Demonstrates how to register a local action for AI agents.",
-  schema: {
-    type: "object",
-    properties: { text: { type: "string", description: "Any text" } },
-    required: ["text"],
-  },
-  metadata: { tags: ["example"], visibility: "internal", riskLevel: "low" },
-  async execute({ text }) {
-    return { echoed: text, length: text.length };
-  },
-};
+import {
+  defineCapability,
+  defineCapabilityFromExtracted,
+  registerCapabilityDefinitions,
+  CapabilityRegistry,
+  CapabilityRuntime,
+  evaluatePolicy,
+} from "ai-capabilities";
 ```
 
-First real capability:
+Avoid deep-importing from `src/*` or `dist/*`; the root entry exposes the supported surface.
+
+## Risk levels at a glance
+
+| Risk level | Meaning |
+| --- | --- |
+| safe | read-only lookups or diagnostics |
+| low | harmless mutations (drafts, notifications) |
+| medium | trusted create/update operations |
+| high | destructive or sensitive actions (delete, transfer) |
+| critical | production-risk actions requiring layered controls |
+
+### Promoting an extracted capability
+When `npx ai-capabilities inspect` surfaces `hook.create-project-mutation`, convert it into a runtime-ready definition without losing the source link:
 
 ```ts
-import { defineCapability } from "ai-capabilities";
-import { api } from "../api";
+import { defineCapabilityFromExtracted } from "ai-capabilities";
+import { projectApi } from "../services/projectApi";
 
-export const createProjectCapability = defineCapability({
+export const projectsCreateCapability = defineCapabilityFromExtracted({
+  sourceId: "hook.create-project-mutation",
   id: "projects.create",
   displayTitle: "Create project",
-  description: "Creates a new project visible to the current user.",
+  description: "Creates a workspace project and returns its identifier.",
   inputSchema: {
     type: "object",
-    properties: { name: { type: "string", description: "Project name" } },
+    properties: {
+      name: { type: "string", minLength: 3 },
+      description: { type: "string" },
+    },
     required: ["name"],
   },
-  aliases: ["create project", "new project"],
-  exampleIntents: ["Create a project called Analytics"],
   policy: {
     visibility: "internal",
     riskLevel: "medium",
-    confirmationPolicy: "none",
+    confirmationPolicy: "once",
   },
-  execute: async ({ name }) => api.createProject({ name }),
+  async execute({ name, description }) {
+    return projectApi.create({ name, description });
+  },
 });
 ```
+`defineCapabilityFromExtracted` annotates the authored capability with `metadata.extractedSourceId`, so registries, manifests, and docs always keep a trace back to the original hook.
 
-### Capability extraction & manifest
+### Generating capability scaffolds from extracted actions
+1. Run `npx ai-capabilities extract` (or `inspect`) and pick the extracted id you want to promote (e.g., `hook.create-project-mutation`).
+2. Scaffold a file directly from the manifest:
+   ```bash
+   npx ai-capabilities scaffold --id hook.create-project-mutation
+   ```
+   Use `--manifest` to point at a custom canonical manifest and `--dir` to change the output directory if needed.
+3. The CLI creates `src/ai-capabilities/capabilities/createProjectCapability.ts`:
+   ```ts
+   import { defineCapabilityFromExtracted } from "ai-capabilities";
 
-- **Why AI Capabilities** — tool-calling without structured metadata breaks; agents need schemas, policies, and execution guarantees.
-- **What AI Capabilities does** — extracts actions, builds manifests, generates tool definitions, and runs capabilities with guardrails.
-- **Comparison** — OpenAPI describes APIs; AI Capabilities describes executable actions (backend + UI).
-- **Outputs** — raw manifest, canonical manifest, public manifest, enriched manifest, HTTP endpoints, and pilot reports.
+   export const createProjectCapability = defineCapabilityFromExtracted({
+     sourceId: "hook.create-project-mutation",
+     // TODO: replace with your canonical id (e.g., "projects.create")
+     id: "hook.create-project-mutation",
+     displayTitle: "Create Project",
+     description: "Create a project",
+     inputSchema: {
+       type: "object",
+       properties: { name: { type: "string" } },
+       required: ["name"]
+     },
+     policy: {
+       visibility: "internal",
+       riskLevel: "medium",
+       confirmationPolicy: "none"
+     },
+     aliases: [],
+     exampleIntents: [],
+     tags: [],
+     async execute(input) {
+       throw new Error("TODO: implement execute handler for hook.create-project-mutation");
+     }
+   });
+   ```
+4. Fill in the execute handler, update the canonical `id`, and register the capability in `registry.ts`.
 
 ### Runtime & frontend actions
 
@@ -243,29 +394,6 @@ export const openProjectPage = defineCapability({
 });
 ```
 
-```ts
-export const openCreateChartFlow = defineCapability({
-  id: "modal.open-create-chart",
-  kind: "ui-action",
-  displayTitle: "Open chart creation flow",
-  description: "Opens the chart creation modal or wizard.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      datasetId: { type: "string" },
-      mode: { type: "string", enum: ["quick", "advanced"], default: "quick" },
-    },
-    required: ["datasetId"],
-  },
-  tags: ["charts", "modal"],
-  async execute({ datasetId, mode }, ctx) {
-    await ctx?.ui?.openModal?.("chart-create", { datasetId, mode });
-    ctx?.notify?.info?.("Chart creation flow opened");
-    return { opened: true };
-  },
-});
-```
-
 Runtime execution with adapters:
 
 ```ts
@@ -282,31 +410,9 @@ await runtime.execute(
 
 See [docs/frontend-actions.md](docs/frontend-actions.md) for deeper guidance.
 
-### Capability chaining
-
-Agents often chain multiple actions (create → navigate). The deterministic agent in `examples/react-app/src/agent/localAgent.ts` shows how to plan, execute, observe results, and trigger follow-up capabilities. Read [docs/capability-chaining.md](docs/capability-chaining.md) for patterns and safety tips.
-
-### End-to-end example
-
-1. **User**: “Create a project called Analytics.”
-2. **Agent**: fetches `/.well-known/ai-capabilities.json`, discovers `projects.create`.
-3. **Planner**: selects the OpenAI tool, fills `{ "name": "Analytics" }`.
-4. **Runtime**: validates payload, checks policy, runs `createProject`.
-5. **Application**: persists the project and returns a success payload.
-6. **Agent**: relays confirmation back to the user (optionally chains navigation).
-
-### Demo: fixtures/demo-app
-
-В репозитории есть demo `fixtures/demo-app`, который показывает полный цикл:
-
-1. **Извлечение** — `npm run extract -- --project fixtures/demo-app --config fixtures/config/basic/ai-capabilities.config.json` создаёт `output/capabilities.raw.json`.
-2. **Manifest** — canonical/public версии лежат в `fixtures/golden/demo-app/ai-capabilities*.json`.
-3. **Enrichment** — `npm run enrich -- --input ./output/ai-capabilities.json --output ./output/ai-capabilities.enriched.json --model mock`.
-4. **Runtime/Server** — `npm run serve -- --config fixtures/config/basic/ai-capabilities.config.json --port 4000` поднимает HTTP API; `GET /.well-known/ai-capabilities.json` показывает публичный surface.
-
 ## Safety model
 
-Capabilities represent real actions, so every definition must declare policy metadata:
+Capabilities represent real application actions that may modify data or trigger workflows, so every definition must declare policy metadata:
 
 - **visibility** — `internal` (default), `public`, `hidden`.
 - **riskLevel** — `safe`, `low`, `medium`, `high`, `critical`.
@@ -332,13 +438,6 @@ Scale: NOT_INITIALIZED < INITIALIZED < EXTRACTED < DISCOVERABLE < PARTIALLY_EXEC
 ```
 
 Refer to [docs/security-model.md](docs/security-model.md) for detailed risk guidance and [docs/external-agents.md](docs/external-agents.md) for publishing rules.
-
-### Status and limitations (MVP)
-
-- Node/TypeScript focus.
-- Limited extractors (OpenAPI, React Query, Router, Form) out of the box.
-- Mock enrichment by default.
-- Simple runtime (single-tenant, manual bindings, no auth/rate limiting).
 
 ## CLI commands & workflows
 
@@ -377,13 +476,19 @@ npm run pilot -- --project fixtures/demo-app --config fixtures/config/basic/ai-c
 
 ## Documentation map
 
+Start with the quickstart and happy-path guides before diving into the reference documentation:
 - [docs/architecture.md](docs/architecture.md)
+- [docs/standardization.md](docs/standardization.md)
 - [docs/manifest.md](docs/manifest.md)
 - [docs/extraction.md](docs/extraction.md)
 - [docs/enrichment.md](docs/enrichment.md)
 - [docs/adapters.md](docs/adapters.md)
 - [docs/runtime.md](docs/runtime.md)
 - [docs/define-capability.md](docs/define-capability.md)
+- [docs/public-api.md](docs/public-api.md)
+- [docs/agent-installer-workflow.md](docs/agent-installer-workflow.md)
+- [docs/llm-onboarding-workflow.md](docs/llm-onboarding-workflow.md)
+- [docs/agents-workflow.md](docs/agents-workflow.md)
 - [docs/frontend-actions.md](docs/frontend-actions.md)
 - [docs/llm-prompt.md](docs/llm-prompt.md)
 - [docs/security-model.md](docs/security-model.md)
@@ -395,49 +500,9 @@ npm run pilot -- --project fixtures/demo-app --config fixtures/config/basic/ai-c
 - [docs/testing.md](docs/testing.md)
 - [docs/contributing.md](docs/contributing.md)
 
-## Карта документации
-
-- [docs/quickstart.md](docs/quickstart.md) — расширенный пошаговый старт.
-- [docs/demo.md](docs/demo.md) — walkthrough demo-проекта.
-- [docs/architecture.md](docs/architecture.md) — обзор архитектуры и поток данных.
-- [docs/manifest.md](docs/manifest.md) — контракт и артефакты manifest.
-- [docs/extraction.md](docs/extraction.md) — поддерживаемые extractors и pipeline.
-- [docs/enrichment.md](docs/enrichment.md) — enrichment слой и модельные клиенты.
-- [docs/adapters.md](docs/adapters.md) — генерация tools для разных моделей.
-- [docs/runtime.md](docs/runtime.md) — runtime, binding и execution flow.
-- [docs/define-capability.md](docs/define-capability.md) — helper для ручных capability.
-- [docs/frontend-actions.md](docs/frontend-actions.md) — явные UI/навигационные действия.
-- [docs/llm-prompt.md](docs/llm-prompt.md) — LLM-подсказки.
-- [docs/security-model.md](docs/security-model.md) — политика безопасности.
-- [docs/capability-chaining.md](docs/capability-chaining.md) — цепочки capabilities.
-- [docs/demo-scenario.md](docs/demo-scenario.md) — демо-сценарий.
-- [docs/doctor.md](docs/doctor.md) — диагностика.
-- [docs/policy.md](docs/policy.md) — safety/policy слой.
-- [docs/server.md](docs/server.md) — HTTP API.
-- [docs/external-agents.md](docs/external-agents.md) — public discovery.
-- [docs/pilot.md](docs/pilot.md) — pilot run.
-- [docs/testing.md](docs/testing.md) — стратегия тестирования.
-- [docs/contributing.md](docs/contributing.md) — правила вклада.
-
-## Package structure
-
-Репозиторий готовит модульную экосистему:
-
-- `@ai-capabilities/core` — manifest/types/config utilities
-- `@ai-capabilities/extract` — extraction pipeline
-- `@ai-capabilities/enrich` — enrichment utilities
-- `@ai-capabilities/runtime` — runtime + policy binding
-- `@ai-capabilities/adapters` — model tool adapters
-- `@ai-capabilities/server` — HTTP transport + well-known
-- `@ai-capabilities/cli` — CLI for extract/enrich/serve/pilot
-
-## Основные сценарии
-
-- **Внутренний AI copilot**: подключение к существующему проекту и предоставление LLM-помощнику списка доступных действий.
-- **Model-agnostic tools**: генерация tool definitions для OpenAI, Anthropic или внутренних провайдеров из одного manifest.
-- **Capability runtime**: безопасное исполнение capability через единый binding/policy слой.
-- **Public agent discovery**: публикация публичных возможностей через `/.well-known/ai-capabilities.json`.
-- **Pilot run**: воспроизводимый прогон на реальном приложении с отчётами и трассировкой.
+**Choosing between prompts and guided onboarding**
+- Use [docs/llm-onboarding-workflow.md](docs/llm-onboarding-workflow.md) when a coding assistant needs to integrate AI Capabilities end-to-end (inspect → detect existing AI stack → ask missing questions → generate files → wire chat/runtime).
+- Use [docs/llm-prompt.md](docs/llm-prompt.md) when you only need targeted help filling in metadata or improving a single capability.
 
 ## Contributing
 

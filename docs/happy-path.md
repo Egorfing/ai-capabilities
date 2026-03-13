@@ -1,6 +1,6 @@
 # Happy-path integration guide
 
-This guide walks through the minimal steps to go from zero to an AI-powered UI using AI Capabilities. Follow along with `examples/react-app` or your own project.
+This guide walks through the minimal steps to go from zero to an AI-powered UI using AI Capabilities. Follow along with `examples/react-app` or your own project. Keep [README.md](../README.md) nearby for the CLI map and use [docs/llm-onboarding-workflow.md](./llm-onboarding-workflow.md) if a coding assistant is driving.
 
 ## 1. Install dependencies
 ```bash
@@ -14,8 +14,12 @@ npx ai-capabilities init
 ```
 This creates `ai-capabilities.config.json` and the `src/ai-capabilities/` scaffold.
 
-## 3. Define capabilities
-Add files under `src/ai-capabilities/capabilities/` using `defineCapability`. Start with:
+## 3. Define capabilities (authoring standard)
+Add files under `src/ai-capabilities/capabilities/` using the helper DSL:
+- `defineCapabilityFromExtracted` when you promote an extracted hook; it preserves `sourceId` and keeps the manifest traceable.
+- `defineCapability` when you author frontend/navigation or bespoke server actions from scratch.
+
+This is the canonical authoring model: manifests describe discovery, helper files describe executable intent. Start with:
 - A backend mutation (e.g., `projects.create`)
 - A safe read capability (`projects.list`)
 - A UI/navigation action (`navigation.open-project-page`)
@@ -23,6 +27,35 @@ Add files under `src/ai-capabilities/capabilities/` using `defineCapability`. St
 Refer to `examples/react-app/src/ai-capabilities/capabilities/*.ts` for copy-paste starting points.
 
 As soon as each file exists, assign conservative policy metadata (visibility/risk/confirmation). The [security model](./security-model.md) recommends `visibility: "internal"`, `riskLevel: "low"`, `confirmationPolicy: "none"` for reads and `riskLevel: "medium"`, `confirmationPolicy: "once"` for writes during pilots.
+
+### Generate scaffolds automatically
+List extracted capability IDs at any time without generating files:
+```bash
+npx ai-capabilities scaffold --list
+```
+
+In interactive terminals you can even skip `--id` entirely; the CLI shows a numbered picker and scaffolds the selection. CI/non-interactive shells continue to print the list and exit to avoid hanging.
+
+Instead of creating files manually, run:
+```bash
+npx ai-capabilities scaffold --id hook.create-project-mutation \
+  --manifest ./output/ai-capabilities.json \
+  --dir ./src/ai-capabilities/capabilities
+```
+The command copies metadata from the canonical manifest, creates `createProjectCapability.ts`, and wires `defineCapabilityFromExtracted` with `sourceId` already set. Edit the generated file to pick the final `id` and implement `execute`.
+
+### Auto-bind safe reads and creates
+To bootstrap the obvious read/create capabilities in bulk:
+```bash
+npx ai-capabilities auto-bind \
+  --manifest ./output/ai-capabilities.json \
+  --dir ./src/ai-capabilities/auto
+```
+Run with `--dry-run` first to preview what would happen. The CLI writes conservative `defineCapabilityFromExtracted` files into `src/ai-capabilities/auto/` (safe read/list queries plus create/update mutations). Review them, move anything that needs customization into `capabilities/`, then register the exports in your registry.
+
+Use this split to stay safe:
+- **auto-bind** → obvious, low-risk reads/creates you want quickly (agent-native fast path).
+- **scaffold/hand-authored** → higher-risk mutations, destructive flows, UI/navigation behavior that needs human judgment.
 
 ## 4. Register capabilities and wire the runtime
 Inside `src/ai-capabilities/registry.ts`:
@@ -40,6 +73,34 @@ Create a runtime helper (see `examples/react-app/src/agent/runtime.ts`) that:
 - Instantiates `CapabilityRuntime`
 - Passes router/ui/notify adapters through `handlerContext`
 
+### Example: promoting an extracted capability
+```ts
+import { defineCapabilityFromExtracted } from "ai-capabilities";
+
+export const projectsCreateCapability = defineCapabilityFromExtracted({
+  sourceId: "hook.create-project-mutation",
+  id: "projects.create",
+  displayTitle: "Create project",
+  description: "Creates a workspace project",
+  inputSchema: {
+    type: "object",
+    properties: {
+      name: { type: "string" },
+      description: { type: "string" }
+    },
+    required: ["name"]
+  },
+  policy: {
+    visibility: "internal",
+    riskLevel: "medium",
+    confirmationPolicy: "once"
+  },
+  async execute({ name, description }) {
+    return projectApi.create({ name, description });
+  }
+});
+```
+
 ## 5. Run extraction + doctor + inspect
 ```bash
 npx ai-capabilities extract
@@ -49,6 +110,8 @@ npx ai-capabilities inspect --json | jq
 - `extract` generates raw/canonical/public manifests.
 - `doctor` diagnoses readiness and lists next steps.
 - `inspect` inventories capabilities by kind/visibility/executability.
+
+Running `extract` will create or refresh the `output/` directory. Everything inside (`ai-capabilities*.json`, diagnostics, traces) is generated from your source code—treat it like build output. `output/` is fully regenerable: delete it and run `npx ai-capabilities extract` whenever you need a fresh manifest. Keep authoring executable capabilities in `src/ai-capabilities`, using the manifest data as input for `defineCapabilityFromExtracted`. Before asking more questions, run `npx ai-capabilities detect-llm --project .` (or `--json`) to see whether an AI/LLM stack already exists. Coding assistants should follow [docs/llm-onboarding-workflow.md](./llm-onboarding-workflow.md) if they need a guided inspect → question → generate loop.
 
 Address any issues before continuing (missing enriched manifest, unbound capabilities, etc.).
 

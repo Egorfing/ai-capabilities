@@ -62,6 +62,7 @@ function buildManifest(): AiCapabilitiesManifest {
 function createContext(manifest: AiCapabilitiesManifest): RouteContext {
   const runtime: CapabilityRuntimeInterface = {
     execute: vi.fn(),
+    getManifest: () => manifest,
   };
   const state: ServerState = {
     manifest,

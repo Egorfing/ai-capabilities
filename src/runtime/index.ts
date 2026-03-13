@@ -5,6 +5,7 @@ export type {
   CapabilityHandler,
   CapabilityHandlerContext,
   CapabilityRuntimeExecuteOptions,
+  CapabilityRuntimeInterface,
   ExecutionMode,
 } from "./runtime-types.js";
 export type { RuntimeErrorCode, RuntimeError } from "./runtime-errors.js";

@@ -28,11 +28,11 @@ export async function initProject(options: InitProjectOptions = {}): Promise<Ini
   const capabilityReport = ensureFile(capabilityPath, createExampleCapabilityTemplate());
 
   const nextSteps = [
-    "Review ai-capabilities.config.json and adjust include/exclude paths for your repo.",
-    "Replace src/ai-capabilities/capabilities/exampleCapability.ts with a real action.",
-    "Run npx ai-capabilities inspect to see what the extractor picks up.",
-    "Run npx ai-capabilities extract to build the manifest.",
-    "Run npx ai-capabilities serve to expose the capability runtime.",
+    "Inspect your project: npx ai-capabilities inspect",
+    "Extract discovered capabilities: npx ai-capabilities extract",
+    "Scaffold executable capabilities: npx ai-capabilities scaffold --id <capability-id>",
+    "Register new capabilities in src/ai-capabilities/registry.ts and wire them into your runtime.",
+    "Serve or test the runtime: npx ai-capabilities serve",
   ];
 
   return {

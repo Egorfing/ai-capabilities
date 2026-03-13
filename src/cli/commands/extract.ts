@@ -26,29 +26,52 @@ Options:
   --help             Show this help
 `.trim();
 
+export interface ExtractCommandOptions {
+  projectPath?: string;
+  outputPath?: string;
+  configPath?: string;
+  cwd?: string;
+  logger?: (message: string) => void;
+}
+
+export interface ExtractCommandResult {
+  projectPath: string;
+  configPath: string;
+  rawPath: string;
+  canonicalPath: string;
+  publicPath: string;
+  diagnosticsPath: string;
+  capabilityCount: number;
+  canonicalCount: number;
+  extractors: string[];
+}
+
 export async function runExtract(args: ParsedArgs): Promise<void> {
   if (args.flags.help) {
     console.log(extractHelp);
     return;
   }
 
-  const projectFlag = args.flags.project;
-  const outputFlag = args.flags.output;
-  const configFlag = args.flags.config;
+  await executeExtractCommand({
+    projectPath: typeof args.flags.project === "string" ? args.flags.project : undefined,
+    outputPath: typeof args.flags.output === "string" ? args.flags.output : undefined,
+    configPath: typeof args.flags.config === "string" ? args.flags.config : undefined,
+    cwd: process.cwd(),
+    logger: (message) => console.log(message),
+  });
+}
+
+export async function executeExtractCommand(options: ExtractCommandOptions = {}): Promise<ExtractCommandResult> {
+  const cwd = options.cwd ?? process.cwd();
+  const logger = options.logger ?? (() => {});
 
   const config = await loadConfig({
-    configPath: typeof configFlag === "string" ? configFlag : undefined,
-    cwd: process.cwd(),
+    configPath: options.configPath,
+    cwd,
   });
 
-  const projectPath =
-    projectFlag && typeof projectFlag === "string"
-      ? resolve(projectFlag)
-      : config.project.root;
-  const outputPath =
-    outputFlag && typeof outputFlag === "string"
-      ? resolve(outputFlag)
-      : config.output.raw;
+  const projectPath = options.projectPath ? resolve(cwd, options.projectPath) : config.project.root;
+  const outputPath = options.outputPath ? resolve(cwd, options.outputPath) : config.output.raw;
 
   const finalConfig: ResolvedConfig = {
     ...config,
@@ -60,10 +83,10 @@ export async function runExtract(args: ParsedArgs): Promise<void> {
     tracesDir: finalConfig.output.tracesDir,
   });
 
-  console.log(`[extract] config: ${config.filePath}`);
-  console.log(`[extract] project: ${projectPath}`);
-  console.log(`[extract] trace: ${traceId}`);
-  console.log(`[extract] registered extractors: ${defaultRegistry.names().join(", ") || "(none)"}`);
+  logger(`[extract] config: ${config.filePath}`);
+  logger(`[extract] project: ${projectPath}`);
+  logger(`[extract] trace: ${traceId}`);
+  logger(`[extract] registered extractors: ${defaultRegistry.names().join(", ") || "(none)"}`);
 
   const result = await runPipeline(defaultRegistry, { projectPath, config: finalConfig }, {
     traceWriter,
@@ -73,7 +96,6 @@ export async function runExtract(args: ParsedArgs): Promise<void> {
   logDiagnostics(result.diagnostics, { minLevel: "warning" });
   const mergeResult = mergeCapabilities(result.capabilities);
 
-  // Build manifest
   const manifest: RawCapabilityManifest = {
     meta: {
       generatedAt: new Date().toISOString(),
@@ -84,7 +106,6 @@ export async function runExtract(args: ParsedArgs): Promise<void> {
     capabilities: mergeResult.capabilities,
   };
 
-  // Write output
   const absOutput = finalConfig.output.raw;
   mkdirSync(dirname(absOutput), { recursive: true });
   writeFileSync(absOutput, JSON.stringify(manifest, null, 2) + "\n");
@@ -106,14 +127,26 @@ export async function runExtract(args: ParsedArgs): Promise<void> {
   writeDiagnosticsFile(result.diagnostics, diagnosticsPath);
   const summary = summarizeDiagnostics(result.diagnostics);
 
-  console.log(
+  logger(
     `[extract] merged ${result.capabilities.length} technical capabilities into ${mergeResult.capabilities.length} canonical capabilities`,
   );
-  console.log(`[extract] ${mergeResult.capabilities.length} capabilities written`);
-  console.log(`[extract] raw manifest written to ${absOutput}`);
-  console.log(`[extract] canonical manifest written to ${canonicalPath}`);
-  console.log(`[extract] public manifest written to ${publicPath}`);
-  console.log(
+  logger(`[extract] ${mergeResult.capabilities.length} capabilities written`);
+  logger(`[extract] raw manifest written to ${absOutput}`);
+  logger(`[extract] canonical manifest written to ${canonicalPath}`);
+  logger(`[extract] public manifest written to ${publicPath}`);
+  logger(
     `[extract] diagnostics saved to ${diagnosticsPath} (${summary.errors} errors, ${summary.warnings} warnings, ${summary.infos} info)`,
   );
+
+  return {
+    projectPath,
+    configPath: config.filePath,
+    rawPath: absOutput,
+    canonicalPath,
+    publicPath,
+    diagnosticsPath,
+    capabilityCount: result.capabilities.length,
+    canonicalCount: mergeResult.capabilities.length,
+    extractors: result.extractorsRun,
+  };
 }

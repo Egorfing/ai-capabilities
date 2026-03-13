@@ -1,4 +1,8 @@
-import type { CapabilityExecutionRequest, CapabilityExecutionResult } from "../types/index.js";
+import type {
+  CapabilityExecutionRequest,
+  CapabilityExecutionResult,
+  AiCapabilitiesManifest,
+} from "../types/index.js";
 
 export type ExecutionMode = "internal" | "public";
 
@@ -24,4 +28,5 @@ export interface CapabilityRuntimeInterface {
     request: CapabilityExecutionRequest,
     options?: CapabilityRuntimeExecuteOptions,
   ): Promise<CapabilityExecutionResult>;
+  getManifest(): AiCapabilitiesManifest;
 }

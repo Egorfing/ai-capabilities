@@ -34,7 +34,13 @@ AI Capabilities adds an “agent surface” to any application without rewiring 
 3. `npx ai-capabilities enrich` (optional) produces `output/ai-capabilities.enriched.json`.
 4. `registerCapabilityDefinitions` loads manual definitions into a `CapabilityRegistry`.
 5. Runtime executes capabilities either locally (`runtime.execute`) or via HTTP server `POST /execute`.
-6. Agents/LLMs read `/.well-known/ai-capabilities.json` to discover public actions and call them via the execution endpoint.
+6. Agents/LLMs read `/.well-known/ai-capabilities.json` (the discovery standard, similar to `robots.txt` + `openapi.json` for actions) to discover public capabilities before calling `/execute`.
+
+## Discovery surface
+- `/.well-known/ai-capabilities.json` lives under your primary domain so any agent can find it using the same heuristics they use for `robots.txt`.
+- Treat the canonical manifest as your internal catalog, and the well-known endpoint as the export controlled by `policy.visibility`.
+- Link this surface in your docs/onboarding so partner teams know exactly where to fetch capabilities.
+- See [docs/external-agents.md](./external-agents.md) and [docs/standardization.md](./standardization.md) for operational details.
 
 ## Frontend/UI flow
 

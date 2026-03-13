@@ -3,6 +3,7 @@ export const VERSION = "0.2.1";
 
 export {
   defineCapability,
+  defineCapabilityFromExtracted,
   registerCapabilityDefinitions,
   capabilityDefinitionToRegistryEntry,
 } from "./capability-definition/index.js";
@@ -15,6 +16,8 @@ export type {
   CapabilityNotifyAdapter,
   CapabilityExecutor,
   CapabilityPolicyDefinition,
+  ExtractedCapabilityDefinitionInput,
+  CapabilityRegistryLike,
 } from "./capability-definition/index.js";
 export {
   CapabilityRegistry,
@@ -31,6 +34,8 @@ export type {
   CapabilityHandler,
   CapabilityHandlerContext,
   CapabilityRuntimeExecuteOptions,
+  CapabilityRuntimeInterface,
+  CapabilityRuntimeOptions,
   ExecutionMode,
   RuntimeError,
   RuntimeErrorCode,

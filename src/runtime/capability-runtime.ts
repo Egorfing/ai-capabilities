@@ -191,6 +191,10 @@ export class CapabilityRuntime {
     }
   }
 
+  getManifest(): AiCapabilitiesManifest {
+    return this.manifest;
+  }
+
   private getValidator(capability: AiCapability): ValidateFunction {
     if (this.validatorCache.has(capability.id)) {
       return this.validatorCache.get(capability.id)!;

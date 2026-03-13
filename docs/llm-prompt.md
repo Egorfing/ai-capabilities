@@ -2,6 +2,10 @@
 
 LLMs are great at filling the semantic gaps after extraction: naming capabilities, refining schemas, and proposing UI actions. This guide provides copy-paste prompts for coding assistants (Cursor, Claude Code, Copilot Chat, etc.) so you can stay in control while letting an LLM draft the missing bits.
 
+Need a full project-aware onboarding (diagnose repo → detect AI stack → ask only missing questions → generate files)? Use [docs/llm-onboarding-workflow.md](./llm-onboarding-workflow.md). Use this prompts document for focused edits to individual capabilities once the integration path is already chosen.
+
+For the CLI sequence see the onboarding quick start in [README.md](../README.md) or [docs/happy-path.md](./happy-path.md). Troubleshooting and FAQs live in [docs/faq.md](./faq.md).
+
 ## When to use prompts
 - You have raw/extracted capabilities with placeholder metadata.
 - You need to transform a hook/query/mutation into a production-ready `defineCapability` entry.

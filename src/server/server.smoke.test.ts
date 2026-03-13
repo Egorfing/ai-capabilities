@@ -33,6 +33,7 @@ let skipReason: string | undefined;
   );
   const runtime: CapabilityRuntimeInterface = {
     execute: runtimeExecuteMock,
+    getManifest: () => manifest,
   };
 
   beforeAll(async () => {

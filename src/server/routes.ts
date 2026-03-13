@@ -1,7 +1,7 @@
 import { success, failure } from "./response-builders.js";
 import type { RouteContext, RouteResult } from "./server-types.js";
+import type { CapabilityExecutionResult } from "../types/index.js";
 import { HttpError } from "./server-types.js";
-import type { JsonValue } from "./server-types.js";
 import {
   readJsonBody,
   parseExecutePayload,
@@ -9,8 +9,8 @@ import {
   parseTraceFilter,
 } from "./request-parsers.js";
 import { filterTraceEvents, readTraceDir } from "../trace/index.js";
-import type { CapabilityExecutionResult } from "../types/index.js";
 import { buildWellKnownResponse } from "../well-known/index.js";
+import { mapExecutionResult } from "./response-utils.js";
 
 export async function handleHealth(ctx: RouteContext): Promise<RouteResult> {
   await ctx.recordEvent("http.health", "Health check requested");
@@ -149,59 +149,4 @@ export async function handleWellKnown(ctx: RouteContext): Promise<RouteResult> {
     capabilityCount: response.capabilities.length,
   });
   return { statusCode: 200, body: success(response) };
-}
-
-function mapExecutionResult(result: CapabilityExecutionResult): RouteResult {
-  const meta = {
-    capabilityId: result.capabilityId,
-    durationMs: result.durationMs ?? 0,
-    status: result.status,
-  };
-
-  switch (result.status) {
-    case "success":
-      return { statusCode: 200, body: success(result.data ?? null, meta) };
-    case "denied": {
-      const err = result.error ?? { code: "POLICY_DENIED", message: "Execution denied" };
-      return { statusCode: 403, body: failure(err.code, err.message, sanitizeDetails(err.code, err.details), meta) };
-    }
-    case "pending": {
-      const err = result.error ?? {
-        code: "POLICY_CONFIRMATION_REQUIRED",
-        message: "Confirmation required",
-      };
-      return { statusCode: 409, body: failure(err.code, err.message, sanitizeDetails(err.code, err.details), meta) };
-    }
-    case "error": {
-      const err = result.error ?? { code: "HANDLER_ERROR", message: "Execution failed" };
-      const statusCode = errorStatusCode(err.code);
-      return { statusCode, body: failure(err.code, err.message, sanitizeDetails(err.code, err.details), meta) };
-    }
-    default:
-      return { statusCode: 500, body: failure("UNKNOWN_STATUS", `Unhandled runtime status: ${result.status}`, undefined, meta) };
-  }
-}
-
-function sanitizeDetails(code: string, details: unknown): JsonValue | undefined {
-  if (details === undefined) return undefined;
-  if (code === "HANDLER_ERROR") {
-    return undefined;
-  }
-  return details as JsonValue;
-}
-
-function errorStatusCode(code: string): number {
-  switch (code) {
-    case "CAPABILITY_NOT_FOUND":
-    case "HANDLER_NOT_FOUND":
-      return 404;
-    case "INVALID_INPUT":
-      return 400;
-    case "POLICY_DENIED":
-      return 403;
-    case "POLICY_CONFIRMATION_REQUIRED":
-      return 409;
-    default:
-      return 500;
-  }
 }

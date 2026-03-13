@@ -1,0 +1,12 @@
+{
+  "name": "express-ai-capabilities-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx server.ts"
+  },
+  "dependencies": {
+    "ai-capabilities": "file:../..",
+    "express": "^4.19.2"
+  }
+}

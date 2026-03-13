@@ -6,6 +6,13 @@ This example mimics a minimal product UI that exposes three capabilities to an i
 2. `projects.list` — read capability
 3. `navigation.open-project-page` — UI/navigation capability
 
+This repo demonstrates:
+
+- **defineCapabilityFromExtracted** — see `src/ai-capabilities/capabilities/createProject.ts` and `listProjects.ts`.
+- **UI capabilities** — `openProjectPage.ts` calls router adapters via `ctx.router`.
+- **CapabilityRuntime** — `src/agent/runtime.ts` wires manifest + registry + adapters.
+- **Deterministic agent loop** — `src/agent/localAgent.ts` chooses capabilities without real LLM calls.
+
 The folder demonstrates the recommended structure:
 
 ```
@@ -28,7 +35,7 @@ examples/react-app/
     App.tsx
 ```
 
-> This is a teaching artifact. You can copy these files into your own app and wire them up to your actual router, API clients, and LLM provider.
+> This is a teaching artifact. You can copy these files into your own app and wire them up to your actual router, API clients, and LLM provider. See the file map above to locate the relevant concepts quickly.
 
 ## Run the demo locally
 
