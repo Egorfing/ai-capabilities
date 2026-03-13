@@ -31,7 +31,7 @@ describe("demo app manifest contract", () => {
         generatedAt: new Date().toISOString(),
         sourceProject: DEMO_APP_PATH,
         extractors: pipeline.extractorsRun,
-        version: "0.2.0",
+        version: "0.2.1",
       },
       capabilities: merged.capabilities,
     };

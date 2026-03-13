@@ -79,7 +79,7 @@ export async function runExtract(args: ParsedArgs): Promise<void> {
       generatedAt: new Date().toISOString(),
       sourceProject: projectPath,
       extractors: result.extractorsRun,
-      version: "0.2.0",
+      version: "0.2.1",
     },
     capabilities: mergeResult.capabilities,
   };

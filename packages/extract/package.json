@@ -1,6 +1,6 @@
 {
   "name": "@ai-capabilities/extract",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Extraction pipeline components for AI Capabilities.",
   "type": "module",

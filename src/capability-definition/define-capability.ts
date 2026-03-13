@@ -2,7 +2,7 @@ import type { CapabilityDefinitionInput, DefinedCapability } from "./capability-
 
 const destructiveKeywords = ["delete", "remove", "destroy", "drop", "reset", "wipe", "terminate"];
 
-function warnIfPolicyLooksUnsafe(definition: CapabilityDefinitionInput) {
+function warnIfPolicyLooksUnsafe<Input, Output>(definition: CapabilityDefinitionInput<Input, Output>) {
   const haystack = [definition.id, ...(definition.aliases ?? [])].join(" ").toLowerCase();
   const matchesDestructive = destructiveKeywords.some((keyword) => haystack.includes(keyword));
   if (!matchesDestructive) {

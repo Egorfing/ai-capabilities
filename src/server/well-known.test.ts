@@ -12,7 +12,7 @@ function buildManifest(): AiCapabilitiesManifest {
   return {
     manifestVersion: "1.0.0",
     generatedAt: "2026-03-11T00:00:00.000Z",
-    app: { name: "Demo App", version: "0.2.0", description: "Demo" },
+    app: { name: "Demo App", version: "0.2.1", description: "Demo" },
     defaults: {
       visibility: "internal",
       riskLevel: "medium",

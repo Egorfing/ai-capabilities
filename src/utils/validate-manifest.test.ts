@@ -28,7 +28,7 @@ describe("validateRawManifest", () => {
 
   it("rejects a capability with invalid id", () => {
     const bad = {
-      meta: { generatedAt: "2025-01-01T00:00:00Z", version: "0.2.0" },
+      meta: { generatedAt: "2025-01-01T00:00:00Z", version: "0.2.1" },
       capabilities: [
         {
           id: "UPPER_CASE",
