@@ -1,15 +1,17 @@
 # Demo walkthrough
 
-`fixtures/demo-app` — это пример React/TypeScript проекта, покрывающий OpenAPI (3.x), React Query, Router и Form паттерны.
+`fixtures/demo-app` is a React/TypeScript sample that covers OpenAPI (3.x), React Query, Router, and Form patterns.
 
-Перед запуском остальных шагов выполните:
+Before anything else:
+
 ```bash
 npx ai-capabilities init
 ```
-Команда создаст стартовый `ai-capabilities.config.json` и папку `src/app-capabilities/` с registry + example capability, которые можно адаптировать под demo или свой проект.
-Определения используют `defineCapability`, поэтому переносить код между демо и реальным приложением просто (см. [define-capability.md](./define-capability.md)) и дополнительно [frontend-actions.md](./frontend-actions.md) для UI/навигационных кейсов.
 
-## Быстрый сценарий
+This creates `ai-capabilities.config.json` and `src/app-capabilities/` (registry + example capability) which you can adapt to the demo or your own project. Definitions use `defineCapability`, so copy/pasting into real apps is straightforward (see [define-capability.md](./define-capability.md) and [frontend-actions.md](./frontend-actions.md) for UI/navigation cases).
+
+## Quick scenario
+
 1. **Extraction**
    ```bash
    npm run extract -- --project fixtures/demo-app --config fixtures/config/basic/ai-capabilities.config.json
@@ -18,38 +20,38 @@ npx ai-capabilities init
    - Diagnostics → `output/diag*.log`.
 
 2. **Manifest build**
-   - Canonical/public файлы появляются в `output/ai-capabilities.json` и `output/ai-capabilities.public.json`.
-   - Golden версии лежат в `fixtures/golden/demo-app/`.
+   - Canonical/public files land in `output/ai-capabilities.json` and `output/ai-capabilities.public.json`.
+   - Golden versions live in `fixtures/golden/demo-app/`.
 
 3. **Enrichment**
    ```bash
    npm run enrich -- --input ./output/ai-capabilities.json --output ./output/ai-capabilities.enriched.json --model mock
    ```
-   - UX-поля сохраняются рядом с canonical manifest.
+   - UX fields are stored alongside the canonical manifest.
 
 4. **Runtime / Server**
    ```bash
    npm run serve -- --config fixtures/config/basic/ai-capabilities.config.json --port 4000
    ```
-   - Проверьте `GET /.well-known/ai-capabilities.json` — увидите публичные capabilities.
-   - `POST /execute` можно вызвать с `capabilityId="api.orders.list-orders"`.
+   - Check `GET /.well-known/ai-capabilities.json` to see public capabilities.
+   - Call `POST /execute` with `capabilityId="api.orders.list-orders"`.
 
 5. **Pilot**
    ```bash
    npm run pilot -- --project fixtures/demo-app --config fixtures/config/basic/ai-capabilities.config.json --with-enrich
    ```
-   - Результаты: `pilot-report.json`, `pilot-summary.md`, traces.
+   - Outputs: `pilot-report.json`, `pilot-summary.md`, traces.
 
-6. **Doctor (диагностика)**
+6. **Doctor**
    ```bash
    npx ai-capabilities doctor
    ```
-   Получите краткий отчёт о конфиге, артефактах и готовности к пилоту. Подробности — [docs/doctor.md](./doctor.md).
+   Produces a readiness report covering config, artifacts, and next steps. See [docs/doctor.md](./doctor.md).
 
-Если хотите увидеть полный UI-поток, изучите [examples/react-app](../examples/react-app) и [docs/happy-path.md](./happy-path.md).
+Want the full UI experience? Explore [examples/react-app](../examples/react-app) and [docs/happy-path.md](./happy-path.md).
 
-## Что смотреть в коде
-- `fixtures/demo-app/openapi.json` — OpenAPI spec (Swagger 2.0 fixtures live in `fixtures/swagger/`).
-- `fixtures/demo-app/src/hooks` — React Query extractors.
-- `fixtures/demo-app/src/router` — маршруты → navigation capabilities.
-- `fixtures/golden/demo-app` — эталонные артефакты для regression tests.
+## Files worth reading
+- `fixtures/demo-app/openapi.json` — OpenAPI spec (Swagger 2.0 fixtures reside in `fixtures/swagger/`).
+- `fixtures/demo-app/src/hooks` — React Query extractor targets.
+- `fixtures/demo-app/src/router` — routes → navigation capabilities.
+- `fixtures/golden/demo-app` — reference artifacts used by regression tests.

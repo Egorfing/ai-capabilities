@@ -1,0 +1,52 @@
+{
+  "projects": [
+    {
+      "id": "proj_1",
+      "name": "Launchpad",
+      "description": "Marketing launch backlog",
+      "createdAt": "2025-12-28T09:00:00.000Z"
+    },
+    {
+      "id": "proj_2",
+      "name": "Data Warehouse",
+      "description": "Analytics infrastructure overhaul",
+      "createdAt": "2026-01-05T11:30:00.000Z"
+    },
+    {
+      "id": "proj_3",
+      "name": "Onboarding Revamp",
+      "description": "Product onboarding flows",
+      "createdAt": "2026-01-10T15:45:00.000Z"
+    }
+  ],
+  "todos": [
+    {
+      "id": "todo_1",
+      "projectId": "proj_1",
+      "title": "Finalize launch brief",
+      "completed": true,
+      "createdAt": "2026-01-11T12:00:00.000Z"
+    },
+    {
+      "id": "todo_2",
+      "projectId": "proj_1",
+      "title": "Sync with creative team",
+      "completed": false,
+      "createdAt": "2026-01-09T10:00:00.000Z"
+    },
+    {
+      "id": "todo_3",
+      "projectId": "proj_2",
+      "title": "Define warehouse SLAs",
+      "completed": false,
+      "createdAt": "2026-01-08T08:30:00.000Z"
+    },
+    {
+      "id": "todo_4",
+      "projectId": "proj_3",
+      "title": "Audit current onboarding emails",
+      "completed": false,
+      "createdAt": "2026-01-12T14:10:00.000Z"
+    }
+  ]
+}

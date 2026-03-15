@@ -1,30 +1,31 @@
 # Safety & Policy
 
-Policy слой ограничивает выполнение capability в зависимости от visibility, риск-уровня и подтверждений.
+The policy layer restricts capability execution based on visibility, risk, confirmation requirements, and permission scopes.
 
-## Поля policy
-Каждый `AiCapability` содержит:
-- `visibility`: `internal` или `public`. Управляет доступностью в public runtime и попаданием в public manifest.
-- `riskLevel`: `low | medium | high | critical` — влияет на требование `allowDestructive`.
-- `confirmationPolicy`: `none | once | always` — требуется ли подтверждение перед выполнением.
-- `permissionScope`: `string[]` — произвольные теги доступа (например, `orders:write`).
+## Policy fields
+Every `AiCapability` may include:
+- `visibility`: `internal` or `public`. Controls whether the capability is exposed in public runtimes/manifests.
+- `riskLevel`: `low | medium | high | critical` — determines whether `allowDestructive` is required.
+- `confirmationPolicy`: `none | once | always` — whether user confirmation is required.
+- `permissionScope`: `string[]` — arbitrary access tags (e.g., `orders:write`).
 
 ## Defaults
-- Определяются в `config.manifest.defaults`.
-- Любые отсутствующие поля capability получают значения по умолчанию.
-- `policy.overrides` в конфиге могут настроить конкретные capability (например, сделать `api.orders.list-orders` публичным).
+- Defined in `config.manifest.defaults`.
+- Any missing policy fields inherit the defaults.
+- `policy.overrides` in the config can tweak individual capabilities (e.g., make `api.orders.list-orders` public).
 
-## Runtime mode
-- `internal` (по умолчанию): разрешены internal/public capabilities, учитываются permission scopes и risk.
-- `public`: разрешены только capabilities с `visibility=public`, `allowDestructive` всегда `false`.
-- Mode прокидывается через HTTP server (`serve --public`) и CLI context.
+## Runtime modes
+- `internal` (default): allows both internal/public capabilities, honors permission scopes and risk levels.
+- `public`: only allows `visibility=public` capabilities; `allowDestructive` is always forced to `false`.
+- The runtime mode flows through the HTTP server (`serve --public`) and any CLI context.
 
-## Решение policy
-`evaluatePolicy` возвращает:
+## Policy evaluation
+`evaluatePolicy` returns:
 - `allowed` (boolean)
 - `requiresConfirmation` (boolean)
-- `reasons`: массив `{ code, message }`
-- Пример deny:
+- `reasons`: array of `{ code, message }`
+
+Example denial:
 ```json
 {
   "allowed": false,
@@ -36,18 +37,18 @@ Policy слой ограничивает выполнение capability в за
 }
 ```
 
-## Когда требуется confirmation
-- `confirmationPolicy` = `once`: первый вызов требует подтверждения (`confirmed=true`), затем кэшируется.
-- `confirmationPolicy` = `always`: подтверждение при каждом вызове.
-- Runtime возвращает статус `pending` + `POLICY_CONFIRMATION_REQUIRED`.
+## Confirmation rules
+- `confirmationPolicy = once`: first execution requires `confirmed=true`; subsequent calls are cached as confirmed.
+- `confirmationPolicy = always`: every execution needs `confirmed=true`.
+- The runtime responds with status `pending` + `POLICY_CONFIRMATION_REQUIRED` when confirmation is missing.
 
-## Ограничения MVP
-- Нет централизованного audit trail для policy решений (только traces).
-- Permission scopes — строковые теги, не интегрированы с внешней auth системой.
-- `allowDestructive` задаётся caller-ом; автоматического определения нет.
-- Public mode не поддерживает пер-tenant overrides или auth.
+## MVP limitations
+- No centralized audit trail for policy decisions (only traces/logs).
+- Permission scopes are string tags; there is no integration with external auth providers yet.
+- `allowDestructive` is passed by the caller; there’s no automatic detection of destructive handlers.
+- Public mode does not support per-tenant overrides/auth.
 
-## Лучшие практики
-- Указывайте `permissionScope` даже для public capability — adapters могут использовать их как подсказку.
-- Любые overrides фиксируйте в конфиге и покрывайте тестами (`manifest.contract.test.ts`).
-- Перед публикацией capability в public убедитесь, что handler не выполняет destructive действия.
+## Best practices
+- Provide `permissionScope` even for public capabilities—adapters can surface them as hints.
+- Capture overrides in the config and cover them with tests (e.g., `manifest.contract.test.ts`).
+- Before marking a capability as public, confirm the handler is non-destructive and safe for untrusted callers.

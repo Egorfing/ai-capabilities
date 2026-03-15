@@ -1,10 +1,10 @@
 # Frontend / UI capabilities
 
-Frontend действия — это capabilities, которые выполняют навигацию, открывают модальные окна, запускают локальные мастера и другие UI-потоки без обязательного backend-запроса. Они описываются тем же `defineCapability`, что и серверные действия, и регистрируются в том же `CapabilityRegistry`.
+Frontend capabilities cover navigation, modal launches, wizards, and other in-app flows that do not require a backend call. They use the same `defineCapability` helper as server-side actions and are registered in the same `CapabilityRegistry`.
 
-> Главное правило: capability остаётся декларативным (schema + policy), а handler выполняет локальную UI-логику через переданный контекст.
+> Core rule: keep the capability declarative (schema + policy). The handler performs UI logic using the provided context.
 
-## Навигация: `navigation.open-project-page`
+## Navigation example: `navigation.open-project-page`
 ```ts
 import { defineCapability } from "ai-capabilities";
 
@@ -16,23 +16,23 @@ export const openProjectPage = defineCapability({
   inputSchema: {
     type: "object",
     properties: {
-      projectId: { type: "string", description: "Project identifier" }
+      projectId: { type: "string", description: "Project identifier" },
     },
-    required: ["projectId"]
+    required: ["projectId"],
   },
   policy: {
     visibility: "internal",
     riskLevel: "low",
-    confirmationPolicy: "none"
+    confirmationPolicy: "none",
   },
   async execute({ projectId }, ctx) {
     ctx?.router?.navigate(`/projects/${projectId}`);
     return { navigated: true };
-  }
+  },
 });
 ```
 
-## UI flow: `modal.open-create-chart`
+## UI flow example: `modal.open-create-chart`
 ```ts
 import { defineCapability } from "ai-capabilities";
 
@@ -45,26 +45,28 @@ export const openCreateChart = defineCapability({
     type: "object",
     properties: {
       datasetId: { type: "string" },
-      mode: { type: "string", enum: ["quick", "advanced"], default: "quick" }
+      mode: { type: "string", enum: ["quick", "advanced"], default: "quick" },
     },
-    required: ["datasetId"]
+    required: ["datasetId"],
   },
   tags: ["charts", "modal"],
   exampleIntents: ["Open the chart wizard for dataset marketing_2026"],
   policy: {
     visibility: "internal",
-    confirmationPolicy: "none"
+    confirmationPolicy: "none",
   },
   async execute({ datasetId, mode }, ctx) {
     await ctx?.ui?.openModal?.("chart-create", { datasetId, mode });
     ctx?.notify?.info?.("Chart creation flow opened");
     return { opened: true };
-  }
+  },
 });
 ```
 
-## Передача frontend-контекста
-Контекст передаётся через `handlerContext` при вызове runtime:
+## Passing frontend context
+
+Context is delivered through `handlerContext` when executing the runtime:
+
 ```ts
 import { CapabilityRuntime } from "ai-capabilities";
 import { registry, manifest } from "./ai";
@@ -77,28 +79,29 @@ await runtime.execute(
     handlerContext: {
       router: { navigate: (path) => appRouter.push(path) },
       ui: { openModal: (id, payload) => modals.open(id, payload) },
-      notify: { info: (msg) => toast.info(msg) }
-    }
-  }
+      notify: { info: (msg) => toast.info(msg) },
+    },
+  },
 );
 ```
-`handlerContext` — произвольный объект, который вы передаёте при выполнении capability. Локальный агент (React/Vite приложение, desktop shell и т.д.) формирует его из собственных утилит (`router`, `ui`, `notify`).
 
-## Совместимость и policy
-- `kind: "ui-action"`/`"navigation"` помогает агенту понимать, что действие выполняется локально и может не требовать backend.
-- `policy.visibility`, `riskLevel`, `confirmationPolicy` работают так же, как для серверных capability.
-- При выборе значений опирайтесь на [docs/security-model.md](./security-model.md): UI действия обычно `visibility: "internal"`, `riskLevel: "low"`, пока вы не готовы расширять доступ.
-- Поскольку handler исполняется в приложении, позаботьтесь о разрешениях (например, ограничьте public агента, если действие доступно только сотрудникам).
+`handlerContext` is any object you pass when executing a capability. Local agents (React/Vite apps, desktop shells, etc.) assemble it from their own utilities (`router`, `ui`, `notify`).
 
-## Когда использовать frontend capabilities
-- Навигация между разделами (dashboard → project → settings).
-- Открытие модальных окон, сайдбаров, мастеров.
-- Локальные состояния (фильтры, сортировки, выделение сущности).
-- Подготовка UI перед серверной операцией (например, показать форму перед `projects.create`).
+## Compatibility & policy considerations
+- `kind: "ui-action"` / `"navigation"` helps agents understand the action runs locally and might not need backend access.
+- `policy.visibility`, `riskLevel`, `confirmationPolicy` behave exactly like they do for server-side capabilities.
+- Follow [docs/policy.md](./policy.md) for guidance: UI actions usually stay `visibility: "internal"`, `riskLevel: "low"` until you are ready to expose them.
+- Because the handler runs inside the app, be mindful of permissions (e.g., limit public agents if the action is employee-only).
 
-## Когда оставить backend capability
-- Действие выполняет network-запрос или требует серверных привилегий.
-- Capability уже описан extractor-ом на уровне API/форм.
-- Нужно обеспечить headless исполнение через HTTP runtime.
+## When to prefer frontend capabilities
+- Navigating between sections (dashboard → project → settings).
+- Opening modals, sidebars, wizards.
+- Managing local state (filters, sorting, entity selection).
+- Preparing UI before a server operation (e.g., show a form before `projects.create`).
 
-Frontend и backend capabilities могут сосуществовать — агент выбирает нужный инструмент по `kind`, `tags` и policy.
+## When backend capabilities are better
+- The action performs network calls or needs server privileges.
+- The capability already exists via an extractor (OpenAPI, forms, etc.).
+- You need headless execution over HTTP runtime.
+
+Frontend and backend capabilities can coexist—agents can choose tools based on `kind`, `tags`, and policy.

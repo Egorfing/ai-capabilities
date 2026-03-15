@@ -1,14 +1,14 @@
-# Runtime и binding
+# Runtime and binding
 
-Runtime отвечает за безопасное исполнение capability и связывает manifest с реальными handlers.
+The runtime is responsible for safely executing capabilities and binding the manifest to real handlers.
 
-> Нужен обзор, как выбрать между app-local runtime, HTTP runtime и смешанными сценариями? См. [docs/mixed-scenarios.md](./mixed-scenarios.md) — там описаны сценарии A–F, decision matrix и env-паттерны.
+> Need help choosing between an app-local runtime, HTTP runtime, or mixed setups? See [docs/mixed-scenarios.md](./mixed-scenarios.md) for scenarios A–F, the decision matrix, and env patterns.
 
-> **Безопасный discovery.** HTTP runtime служит canonical manifest только для внутренних агентов. Чтобы включить `/.well-known/ai-capabilities.json`, нужно явно сгенерировать `output/ai-capabilities.public.json` (например, `npx ai-capabilities manifest public`). Если файл отсутствует, well-known выключен (404), а dev fallback (`--unsafe-public-fallback`) доступен только вручную.
+> **Safe discovery reminder.** The HTTP runtime serves the canonical manifest only to internal agents. To expose `/.well-known/ai-capabilities.json` you must generate `output/ai-capabilities.public.json` explicitly (e.g. `npx ai-capabilities manifest public`). If this file is missing, the well-known route stays disabled (404). The `--unsafe-public-fallback` flag exists only for dev migrations and should never be used in production.
 
-### Manifest loader для клиентов/агентов
+### Manifest loader for agents/clients
 
-Когда агенту нужно просто получить актуальный manifest (локально или по HTTP), используйте `loadManifest`:
+When an agent simply needs the latest manifest (either local or remote), use `loadManifest`:
 
 ```ts
 import { loadManifest } from "ai-capabilities";
@@ -20,34 +20,34 @@ const manifestResult = await loadManifest({
 });
 ```
 
-- Для `expectedVisibility: "public"` helper автоматически вызывает `/capabilities?visibility=public` и проверяет, что все capability публичные.
-- Для `expectedVisibility: "internal"` helper использует `/capabilities` или локальный canonical файл.
-- `allowFallback` включает автоматический переход с remote на локальный файл при сетевых проблемах.
-- `ManifestLoadResult` содержит `sourceKind`, `sourceDetail`, `usedFallback`, `usedCache`, `warnings`, чтобы можно было логировать или показывать пользователю.
+- For `expectedVisibility: "public"` the helper automatically calls `/capabilities?visibility=public` and ensures every capability is public.
+- For `expectedVisibility: "internal"` it uses `/capabilities` or falls back to the local canonical file.
+- `allowFallback` lets you automatically drop back to a local file when the remote call fails.
+- `ManifestLoadResult` contains `sourceKind`, `sourceDetail`, `usedFallback`, `usedCache`, and `warnings`, so clients can log what happened.
 
 ### Authored overrides vs. manifest
 
-Когда capability определён через `defineCapability`, его описание (schema/policy/metadata) может отличаться от того, что записано в canonical manifest. `CapabilityRuntime` применяет простые, предсказуемые правила:
+When a capability is authored via `defineCapability`, its schema/policy/metadata may diverge from the canonical manifest. `CapabilityRuntime` applies deterministic rules:
 
-| Field          | Source of truth at runtime                                                                 |
-| -------------- | ------------------------------------------------------------------------------------------ |
-| `execute`      | Всегда из authored capability (handler в registry).                                        |
-| `inputSchema`  | Если authored определение задаёт schema — полная замена manifest, иначе используется manifest. |
-| `outputSchema` | Аналогично `inputSchema`: authored → replace, иначе manifest.                              |
-| `policy`       | Shallow merge: manifest policy → поверх накладываются authored поля (visibility/risk/confirmation). |
-| `metadata`     | Shallow merge: manifest metadata → поверх authored ключи (nested объекты не мерджатся рекурсивно). |
-| Остальные поля | Берутся из manifest, чтобы discovery/public snapshots оставались каноничными.              |
+| Field | Runtime source of truth |
+| --- | --- |
+| `execute` | Always the authored capability (the handler registered in the registry). |
+| `inputSchema` | If the authored definition includes a schema, it fully replaces the manifest version; otherwise the manifest schema is used. |
+| `outputSchema` | Same as `inputSchema`: authored overrides manifest, otherwise use manifest. |
+| `policy` | Shallow merge: start with manifest policy, then overlay authored values (visibility/risk/confirmation). |
+| `metadata` | Shallow merge: manifest metadata with authored keys layered on top (nested objects are **not** merged recursively). |
+| Other fields | Come from the manifest so discovery and public snapshots stay canonical. |
 
-Runtime логирует `console.warn` о том, какие поля были переопределены (warning можно перехватить собственным логгером, если нужно). Если authored capability не задаёт конкретное поле, runtime по-прежнему опирается на manifest. Это значит, что regeneration `output/ai-capabilities.json` всё ещё нужен для discovery, но во время исполнения source of truth — authored DSL.
+The runtime emits a `console.warn` explaining which fields were overridden (replace the logger if you want to capture this elsewhere). If the authored capability omits a field, the runtime continues to rely on the manifest. You still need to regenerate `output/ai-capabilities.json` for discovery, but during execution the authored DSL is the source of truth.
 
-## Основные компоненты
-- **`CapabilityRegistry`** (`src/runtime/capability-registry.ts`) — map `capabilityId → handler`. Handler — async функция, принимающая validated input.
-- **`CapabilityRuntime`** (`src/runtime/capability-runtime.ts`) — orchestration: валидация input schema, policy check, вызов handler, формирование `CapabilityExecutionResult`.
-- **`BindingResolver`** (`src/binding`) — связывает capability с конкретным handler (REST call, RPC, локальный метод). В текущем MVP включён manual registry.
-- **`policy-checker`** — возвращает `allowed`, `requiresConfirmation`, причины отказа.
+## Core pieces
+- **`CapabilityRegistry`** (`src/runtime/capability-registry.ts`) — a map `capabilityId → handler`. Each handler is an async function that receives validated input.
+- **`CapabilityRuntime`** (`src/runtime/capability-runtime.ts`) — orchestrates JSON Schema validation, policy checks, handler execution, and returns `CapabilityExecutionResult` objects.
+- **`BindingResolver`** (`src/binding`) — connects capabilities to handlers (REST calls, RPC, local functions). The current MVP uses a manual registry.
+- **Policy checker** — evaluates `visibility`, risk, confirmation, and permission scopes.
 
 ## Execution flow
-1. HTTP `POST /execute` (или внутренний вызов) формирует `CapabilityExecutionRequest`:
+1. An HTTP `POST /execute` (or in-process call) forms a `CapabilityExecutionRequest`:
    ```json
    {
      "capabilityId": "api.orders.list-orders",
@@ -60,17 +60,18 @@ Runtime логирует `console.warn` о том, какие поля были 
      }
    }
    ```
-2. Runtime находит capability в manifest.
-3. `evaluatePolicy` проверяет visibility, scopes, risk level, confirmation.
-4. JSON Schema validator сверяет `input` с `inputSchema`.
-5. Handler выполняется (например, обёртка над REST API) и возвращает произвольный объект.
-6. Runtime возвращает один из статусов:
+2. The runtime finds the capability in the manifest.
+3. `evaluatePolicy` checks visibility, scopes, risk level, and confirmation state.
+4. The JSON Schema validator checks `input` against `inputSchema`.
+5. The handler runs (e.g., wraps a REST API) and returns an arbitrary object.
+6. The runtime returns one of the statuses:
    - `success` + `data`
    - `pending` (confirmation required)
-   - `denied` (policy) — включает `error.details.reasons`
-   - `error` (handler/input)
+   - `denied` (policy) — includes `error.details.reasons`
+   - `error` (handler/input failure)
 
-Пример `success` результата:
+Example success payload:
+
 ```json
 {
   "status": "success",
@@ -80,13 +81,15 @@ Runtime логирует `console.warn` о том, какие поля были 
 }
 ```
 
-## Binding стратегии
-- **Manual registry (по умолчанию):** вызываем `registry.register("capability.id", handler)` при инициализации runtime. Для DX используйте `defineCapability` + `registerCapabilityDefinitions`, чтобы автоматически пронести handler из декларативного описания (см. [define-capability.md](./define-capability.md)).
-- **HTTP binding (todo):** handler вызывает внешние API, используя `execution.endpoint` из manifest.
-- **Комбинированные:** можно регистрировать разные handlers для одного capability в зависимости от окружения.
+## Binding strategies
+- **Manual registry (default):** call `registry.register("capability.id", handler)` during runtime boot. For better DX, use `defineCapability` + `registerCapabilityDefinitions` to automatically wire handlers from declarative definitions (see [define-capability.md](./define-capability.md)).
+- **HTTP binding (future):** handlers call external APIs using `execution.endpoint` from the manifest.
+- **Hybrid:** register different handlers per environment if needed.
 
 ## Handler context
-Runtime может передать произвольный объект в handler через `handlerContext`. Например, локальный агент может дать доступ к `router` или `ui` адаптерам для frontend действий:
+
+Any object passed through `handlerContext` becomes the second argument of every handler. This is how local agents expose router/UI adapters for frontend actions:
+
 ```ts
 await runtime.execute(request, {
   handlerContext: {
@@ -95,15 +98,16 @@ await runtime.execute(request, {
   },
 });
 ```
-В handler это будет вторым аргументом `execute(input, ctx)`. Для рекомендаций по UI действиям см. [frontend-actions.md](./frontend-actions.md).
 
-## Ошибки и policy
-- `POLICY_DENIED` — visibility mismatch, отсутствуют permission scopes или `allowDestructive=false` при `riskLevel=high`.
-- `POLICY_CONFIRMATION_REQUIRED` — `confirmationPolicy` = `once/always`, а `confirmed` не передан.
-- `HANDLER_NOT_FOUND` — capability есть в manifest, но не зарегистрирован handler.
-- `INVALID_INPUT` — schema validation провалилась.
+See [frontend-actions.md](./frontend-actions.md) for adapter conventions.
 
-## Советы
-- Используйте `CapabilityRegistry` в тестах для симуляции handlers (см. `src/runtime/runtime.test.ts`).
-- Все handlers должны быть идемпотентными и возвращать сериализуемые данные; runtime сам добавляет traces/metrics.
-- Если capability предназначен только для public режима, убедитесь, что handler не требует внутренних tokenов.
+## Errors and policy outcomes
+- `POLICY_DENIED` — visibility mismatch, missing permission scopes, or `allowDestructive=false` while `riskLevel=high`.
+- `POLICY_CONFIRMATION_REQUIRED` — `confirmationPolicy` is `once/always` but `confirmed` was not provided.
+- `HANDLER_NOT_FOUND` — capability exists in the manifest but the handler is not registered.
+- `INVALID_INPUT` — schema validation failed.
+
+## Tips
+- Use `CapabilityRegistry` in tests to simulate handlers (see `src/runtime/runtime.test.ts`).
+- Handlers should be idempotent and return serializable data; the runtime adds traces/metrics automatically.
+- If a capability is meant for public mode only, ensure its handler does not require internal tokens.

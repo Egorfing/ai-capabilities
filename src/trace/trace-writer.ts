@@ -5,7 +5,8 @@
 import { mkdirSync, appendFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { TraceEvent, TraceWriter } from "./trace-types.js";
-import { traceFilePath, generateTraceId } from "./trace-store.js";
+import { traceFilePath } from "./trace-store.js";
+import { generateTraceId } from "./trace-id.js";
 
 // ---- FileTraceWriter ------------------------------------------------------
 

@@ -6,7 +6,7 @@ import type {
   AiCapabilitiesManifest,
   CapabilityExecutionResult,
 } from "ai-capabilities";
-import { exampleCapabilities, registerExampleCapabilities } from "../app-capabilities/index.js";
+import { exampleCapabilities, registerExampleCapabilities } from "../app-capabilities/index";
 
 export interface RouterAdapter {
   navigate: (path: string) => void;
@@ -21,7 +21,7 @@ export interface NotifyAdapter {
   warn?: (message: string) => void;
 }
 
-export interface RuntimeAdapters {
+export interface RuntimeAdapters extends Record<string, unknown> {
   router: RouterAdapter;
   ui: UIAdapter;
   notify: NotifyAdapter;

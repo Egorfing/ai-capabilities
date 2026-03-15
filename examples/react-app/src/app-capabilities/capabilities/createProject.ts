@@ -1,7 +1,10 @@
 import { defineCapability } from "ai-capabilities";
-import { createProject } from "../../data/projectStore.js";
+import { createProject, type Project } from "../../data/projectStore";
 
-export const createProjectCapability = defineCapability({
+export const createProjectCapability = defineCapability<
+  { name: string; description?: string },
+  Project
+>({
   id: "projects.create",
   kind: "mutation",
   displayTitle: "Create workspace project",
@@ -21,7 +24,7 @@ export const createProjectCapability = defineCapability({
     riskLevel: "medium",
     confirmationPolicy: "once",
   },
-  async execute({ name, description }) {
+  async execute({ name, description }: { name: string; description?: string }) {
     return createProject({ name, description });
   },
 });

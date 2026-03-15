@@ -1,32 +1,33 @@
 # Enrichment
 
-Enrichment слой дополняет canonical manifest пользовательскими текстами и примерами, чтобы LLM-агенты лучше понимали capabilities.
+The enrichment layer augments the canonical manifest with user-facing texts and examples so LLM agents better understand each capability.
 
-## Зачем
-- Добавить `userDescription`, `aliases`, `exampleIntents`, `displayTitle`, `riskLevel`/`confirmationPolicy` подсказки, если их нет в raw данных.
-- Не менять структуру выполнения: `inputSchema`, `execution`, `policy.permissionScope` остаются из canonical manifest.
+## Why
+- Add `userDescription`, `aliases`, `exampleIntents`, `displayTitle`, risk/confirmation hints when raw data is sparse.
+- Leave execution-related structure untouched: `inputSchema`, `execution`, and `policy.permissionScope` stay as defined in the canonical manifest.
 
-## Поток
+## Flow
 1. CLI: `npm run enrich -- --input ./output/ai-capabilities.json --output ./output/ai-capabilities.enriched.json --model mock`.
-2. `runEnrichment` читает canonical manifest → итерирует capabilities.
-3. Для каждой capability строится prompt (`buildEnrichmentPrompt`).
-4. `ModelClient` (mock/internal) возвращает `CapabilityEnrichment` JSON.
-5. `applyEnrichment` добавляет новые поля и пишет `ai-capabilities.enriched.json`.
+2. `runEnrichment` reads the canonical manifest and iterates over capabilities.
+3. For each capability, `buildEnrichmentPrompt` generates a prompt.
+4. `ModelClient` (mock/internal) returns a `CapabilityEnrichment` JSON payload.
+5. `applyEnrichment` merges the new fields and writes `ai-capabilities.enriched.json`.
 
 ## Model clients
-| Client | Назначение | Поведение |
+
+| Client | Purpose | Behavior |
 | --- | --- | --- |
-| `mock` | Локальные тесты | Детектит `id`, строит "Handle {Name}" заголовки, примерный intent. |
-| `internal` | Правила без внешнего API | Заполняет описание на основе `kind`, добавляет risk/confirmation подсказки. |
-| (позже) внешние API | TBD | Добавлять осторожно; требуют отдельного ключа/трассировки. |
+| `mock` | Local tests | Detects `id`, builds “Handle {Name}” titles, basic intent. |
+| `internal` | Rules without external APIs | Fills descriptions based on `kind`, adds risk/confirmation hints. |
+| (future) external APIs | TBD | Add carefully; require separate keys + tracing. |
 
-## Что можно/нельзя делать
-- ✅ Добавлять UX-поля (display, aliases, intents, summaries).
-- ✅ Записывать diagnostics, если клиент не смог обработать capability.
-- ❌ Изменять `policy`, `inputSchema`, `execution`, `sources`.
-- ❌ Удалять capability или менять `id`.
+## Allowed vs. forbidden changes
+- ✅ Add UX fields (display titles, aliases, intents, summaries).
+- ✅ Record diagnostics when a client cannot process a capability.
+- ❌ Modify `policy`, `inputSchema`, `execution`, or `sources`.
+- ❌ Remove capabilities or change their IDs.
 
-## Пример enriched capability
+## Example enriched capability
 ```json
 {
   "id": "api.orders.list-orders",
@@ -39,9 +40,9 @@ Enrichment слой дополняет canonical manifest пользовател
 ```
 
 ## Diagnostics
-- Любая ошибка клиента записывается как warning через `trace` + `DiagnosticEntry`.
-- Если enrichment провалился, capability копируется без изменений, чтобы downstream слои оставались консистентными.
+- Any client error becomes a warning via `trace` + `DiagnosticEntry`.
+- If enrichment fails, the capability is copied unchanged so downstream layers remain consistent.
 
-## Советы
-- Храните enriched manifest рядом с canonical → всегда можно пересоздать enriched после любой правки raw данных.
-- Для внешних моделей добавляйте троттлинг и retry в своих `ModelClient` реализациях.
+## Tips
+- Store the enriched manifest next to the canonical one—regenerate enrichment whenever raw data changes.
+- External model clients should implement throttling and retries inside their `ModelClient` implementations.

@@ -29,7 +29,7 @@ export interface PipelineOptions {
  *
  * - Extractors run sequentially (predictable ordering, simpler debugging).
  * - A failing extractor does not stop the pipeline — it adds an error diagnostic.
- * - Merge is a simple concat; deduplication is deferred to Этап 9.
+ * - Merge is a simple concat; deduplication happens in later stages.
  */
 export async function runPipeline(
   registry: ExtractorRegistry,

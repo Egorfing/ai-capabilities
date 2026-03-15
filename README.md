@@ -27,17 +27,16 @@ Here is the “aha moment”: a single user request can trigger both backend and
 
 ## Demo: Create & open a project (aha moment)
 
-```
-User:  "Create a project called Analytics"
-Agent plan:
-  1. projects.create
-  2. navigation.open-project-page (auto follow-up)
-Result:
-  - Project created via backend capability
-  - UI navigates to the new project page with router/ui adapters
+![Demo: assistant creating a project, adding a todo, and navigating to the project page](docs/demo.gif)
+
+The assistant creates a project, adds a todo, and navigates to the project detail page — all through natural language mapped to capability executions.
+
+This live agent runs in `examples/react-app`. Try it:
+
+```bash
+cd examples/react-app && npm install && npm run dev:full
 ```
 
-This deterministic agent lives in `examples/react-app`. Run it with `cd examples/react-app && npm install && npm run dev`, then type the prompt above to watch `[agent]` and `[runtime]` logs show the chained capabilities.
 More scripted walkthroughs live in [docs/demo.md](docs/demo.md).
 
 ## How it works
@@ -69,16 +68,16 @@ AI agent / chat / server tools
 
 ## Quickstart: first working capability (guided)
 
-> CLI-команды запускаются быстро, но рабочая capability появляется только после ручной доработки. Следуйте фазам ниже или откройте подробный гайд — [docs/quickstart.md](docs/quickstart.md).
+> CLI commands run fast, but a capability is only “done” after manual authoring and testing. Follow the phases below or dive into [docs/quickstart.md](docs/quickstart.md) for the long-form guide.
 
-1. **Bootstrap:** `npm install ai-capabilities && npx ai-capabilities init` создают config и scaffold директорию.
-2. **Discover:** `npx ai-capabilities inspect/extract/doctor` фиксируют найденные capability и генерируют manifest (`output/ai-capabilities*.json`).
-3. **Select & Scaffold:** выберите конкретный id и выполните `npx ai-capabilities scaffold --id <capability-id>`.
-4. **Author:** откройте файл в `src/app-capabilities/capabilities/**` и реализуйте `execute`, уточните `inputSchema`/`outputSchema`, policy и metadata.
-5. **Register & Wire:** импортируйте capability в `src/app-capabilities/registry.ts`, добавьте её в `registerCapabilityDefinitions`, убедитесь, что runtime создан (локально или через `npx ai-capabilities serve`).
-6. **Smoke-test:** выполните HTTP запрос `POST /execute` или вызовите runtime напрямую, чтобы убедиться, что capability действительно исполняется. Только после успешного теста считаете capability готовой.
+1. **Bootstrap:** `npm install ai-capabilities && npx ai-capabilities init` creates the config file and scaffold directory.
+2. **Discover:** `npx ai-capabilities inspect/extract/doctor` captures the discovered capabilities and writes the manifest (`output/ai-capabilities*.json`).
+3. **Select & Scaffold:** pick a specific id and run `npx ai-capabilities scaffold --id <capability-id>`.
+4. **Author:** open the generated file under `src/app-capabilities/capabilities/**`, implement `execute`, and confirm `inputSchema`/`outputSchema`, policy, and metadata.
+5. **Register & Wire:** import the capability inside `src/app-capabilities/registry.ts`, pass it to `registerCapabilityDefinitions`, and make sure your runtime is instantiated (locally or via `npx ai-capabilities serve`).
+6. **Smoke-test:** call `POST /execute` or invoke the runtime directly to prove the capability actually runs. Only after a successful test should you consider it ready.
 
-Результат этих шагов — не просто manifest, а минимум одна подтверждённо executable capability, которую можно отдавать агентам. Остальные возможности (public manifest, enrich, HTTP runtime) остаются такими же, но теперь явно отделены от ручной части работы.
+The outcome is more than a manifest—you end up with at least one verified executable capability that agents can call. Everything else (public manifest, enrich, HTTP runtime) stays the same but is clearly separated from the manual steps.
 
 ### Zero-config quick scan
 

@@ -1,37 +1,40 @@
 # Testing strategy
 
-Тесты защищают ключевые контракты и golden артефакты. Используется Vitest (`npm test`).
+Tests guard key contracts and golden artifacts. The suite runs on Vitest (`npm test`).
 
-## Категории
-- **Unit** — отдельные модули (validators, extractors) без побочных эффектов (`src/utils`, `src/extractors/*`).
-- **Contract** — соответствие manifest/adapters/policy контракту (`src/manifest/manifest.contract.test.ts`, `src/adapters/model-tools.test.ts`).
-- **Integration** — end-to-end сценарии (HTTP server, pilot runner).
-- **Snapshot/Golden** — сравнение с `fixtures/golden/demo-app/*.json` и текстовыми summary.
-- **Docs consistency** — проверяет, что README и docs присутствуют и ссылаются на актуальные скрипты.
+## Categories
+- **Unit** — single modules (validators, extractors) with no side effects (`src/utils`, `src/extractors/*`).
+- **Contract** — ensure manifest/adapters/policy stay compatible (`src/manifest/manifest.contract.test.ts`, `src/adapters/model-tools.test.ts`).
+- **Integration** — end-to-end scenarios (HTTP server, pilot runner).
+- **Snapshot/Golden** — compare against `fixtures/golden/demo-app/*.json` and text summaries.
+- **Docs consistency** — verifies README/docs reference the current scripts (see `src/docs/docs-consistency.test.ts`).
 
-## Golden артефакты
-Находятся в `fixtures/golden/demo-app/` и включают:
-- все manifest файлы,
-- adapter outputs,
-- well-known response,
-- pilot report/summary.
-Любое изменение контракта должно сопровождаться обновлением этих файлов и соответствующих тестов.
+## Golden artifacts
+Located under `fixtures/golden/demo-app/` and include:
+- Manifest files.
+- Adapter outputs.
+- Well-known response.
+- Pilot report/summary.
 
-## Нормализация нестабильных полей
-`normalizeForSnapshot` и `normalizeTextSnapshot` заменяют `generatedAt`, `traceId`, абсолютные пути на стабильные маркеры. Это позволяет обновлять golden только при реальных изменениях структуры, а не из-за часов или временных каталогов.
+Any contract change must update these files and their corresponding tests.
 
-## Команды
+## Normalizing volatile fields
+`normalizeForSnapshot` and `normalizeTextSnapshot` replace `generatedAt`, `traceId`, absolute paths, etc., with stable markers so you only update goldens when structures actually change.
+
+## Commands
+
 ```bash
-npm test                 # полный набор Vitest тестов
-./node_modules/.bin/vitest run path/to/test.ts  # точечный прогон
+npm test
+./node_modules/.bin/vitest run path/to/test.ts   # targeted run
 ```
 
-## Когда обновлять golden
-1. Изменился контракт manifest/adapters/server.
-2. Добавили новую capability в demo fixture.
-3. Изменили структуру pilot отчёта.
-Перед обновлением убедитесь, что изменения ожидаемые и отражены в документации.
+## When to update goldens
+1. Manifest/adapter/server contracts change.
+2. New capability added to the demo fixture.
+3. Pilot report structure changes.
 
-## Быстрая проверка
-- `npm run build` — TypeScript компиляция.
-- `npm test` — гарантирует, что docs/README ссылки и CLI команды актуальны (см. `src/docs/docs-consistency.test.ts`).
+Always confirm the changes are intentional and reflected in docs before updating goldens.
+
+## Quick checks
+- `npm run build` — TypeScript compilation.
+- `npm test` — ensures docs/README links and CLI commands stay accurate (`src/docs/docs-consistency.test.ts`).

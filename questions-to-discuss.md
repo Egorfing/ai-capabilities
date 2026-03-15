@@ -1,128 +1,127 @@
-# Настоящий ИИ-ассистент для твоего сайта — Вопросы для обсуждения
+# Real AI assistant for your product — discussion topics
 
-## Контекст
+## Context
 
-Выносим логику чата с tool-calling ассистентом из `mva-front` в отдельную библиотеку.
-Ассистент не просто советует — он выполняет заранее определённые, безопасные действия в приложении.
-
----
-
-## 1. Scope и архитектура библиотеки
-
-- Что именно входит в библиотеку? Варианты:
-  - **Только ядро**: оркестратор, реестр инструментов, построитель запросов, нормализатор ответов
-  - **Ядро + UI**: также поставлять React-компонент чата (headless или со стилями)
-  - **Ядро + UI + адаптеры**: добавить адаптеры для Vue, Svelte, vanilla JS
-- Должно ли ядро библиотеки быть фреймворк-независимым? (чистое TS-ядро + привязки к фреймворкам)
-- Как абстрагироваться от конкретного LLM-провайдера? Сейчас захардкожена Ollama (`qwen3-coder:30b`). Нужен слой адаптеров для OpenAI, Anthropic, локальных моделей, кастомных бэкендов
-- Как поступить с системным промптом? Поставлять дефолтный или требовать от потребителя?
-- Должна ли библиотека управлять состоянием разговора (сообщения, уточнения) или оставить это потребителю?
-- Поддержка стриминга — текущая реализация использует `stream: false`. Библиотека должна поддерживать и стриминг, и обычные ответы?
-- Как обрабатывать i18n? Текущий системный промпт и сообщения на русском
-
-## 2. Проектирование системы инструментов
-
-- Как потребители должны регистрировать свои инструменты/действия? Текущий `toolRegistry.ts` статичный. Нужен плагинный API?
-- Доступность инструментов — как выразить "этот инструмент доступен только когда есть контекст X"?
-- Валидация аргументов инструментов — должна ли библиотека валидировать аргументы или оставить это потребителям?
-- Как обрабатывать результаты выполнения инструментов (успех, ошибка, побочные эффекты)?
-- Должна ли библиотека поддерживать цепочки инструментов (один инструмент вызывает другой)?
-- Как описывать инструменты для LLM — формат function-calling OpenAI, формат tool-use Anthropic или свой собственный?
-
-## 3. Модель безопасности
-
-- Ключевое ценностное предложение — "ассистент может делать только то, что ты разрешил". Как обеспечить это на уровне библиотеки?
-- Нужна ли система разрешений (например, инструменты, требующие подтверждения пользователя перед выполнением)?
-- Как предотвращать атаки prompt injection через пользовательский ввод?
-- Должна ли библиотека как-то изолировать (sandbox) выполнение инструментов?
-- Ограничение частоты запросов / защита от злоупотреблений — на уровне библиотеки или потребителя?
-
-## 4. Существующие решения и конкуренция
-
-- Как это соотносится с:
-  - **Vercel AI SDK** — стриминг, вызов инструментов, React-хуки, мульти-провайдер
-  - **LangChain.js** — агенты, инструменты, цепочки
-  - **CopilotKit** — встроенные в приложение ИИ-копайлоты с действиями
-  - **Assistant UI** — React-компоненты для ИИ-чата
-  - **OpenAI Assistants API** — серверный вызов инструментов
-  - **Anthropic Tool Use** — нативный вызов инструментов Claude
-- В чём уникальное ценностное предложение по сравнению с этими решениями?
-- Достаточно ли "только безопасные, заранее определённые действия" как дифференциатор?
-- Какой пробел на рынке это заполняет?
-
-## 5. Нейминг и позиционирование
-
-- Идеи названия библиотеки? Что-то, что передаёт "ИИ-ассистент, который действует, а не просто болтает"
-- Доступность имени npm-пакета
-- Как позиционировать: "фреймворк ИИ-агентов" vs "тулкит ИИ-ассистента" vs "SDK для чата с вызовом инструментов"
-- Целевая аудитория: фронтенд-разработчики, добавляющие ИИ в существующие приложения? Или шире?
-
-## 6. Стратегия открытого кода
-
-- Какая модель открытого кода?
-  - Полностью открытый (MIT/Apache 2.0) — максимальное распространение
-  - Open core — бесплатное ядро + платные расширения
-  - Source available (BSL/SSPL) — код виден, но коммерческое использование ограничено
-- Как строить комьюнити вокруг проекта?
-- Модель управления — единоличный мейнтейнер vs организация?
-- Гайдлайны для контрибьюторов с первого дня?
-- Какая платформа: GitHub (шире охват) vs GitLab (текущий проект на GitLab)?
-
-## 7. Лицензирование
-
-- MIT — максимальная свобода, максимальное распространение, нет защиты монетизации
-- Apache 2.0 — как MIT, но с патентной защитой
-- AGPL — обязывает производные работы быть open source (хорошо для open-core модели)
-- BSL (Business Source License) — код доступен, через определённое время становится полностью открытым
-- Двойное лицензирование — open source для OSS-проектов, коммерческая лицензия для бизнеса
-- Как выбор лицензии влияет на распространение vs монетизацию?
-- Если выбрать open core: что идёт в бесплатное ядро, а что в платный тир?
-
-## 8. Варианты монетизации
-
-- **Модель open core**: бесплатная библиотека + платные премиум-фичи (дашборд аналитики, корпоративные инструменты, продвинутая безопасность)
-- **Хостинг-сервис**: предлагать управляемую версию (маршрутизация LLM, мониторинг выполнения инструментов)
-- **Маркетплейс**: платные плагины инструментов/действий, расширяющие библиотеку
-- **Поддержка и консалтинг**: корпоративные контракты поддержки
-- **SaaS-обёртка**: no-code/low-code конструктор поверх библиотеки
-- **LLM-прокси**: маршрутизация через свой API, оплата за запрос (как у Vercel AI)
-- Реально ли монетизировать JS-библиотеку в 2026 году? Какие успешные примеры есть?
-- Достаточно ли велик рынок? Кто будет платить?
-
-## 9. Технический план реализации
-
-- Структура пакета: монорепо (core, react, vue и т.д.) или один пакет?
-- Инструменты сборки: tsup, Vite library mode, unbuild?
-- Стратегия тестирования: юнит-тесты для ядра, интеграционные тесты для привязок к фреймворкам
-- Документация: Docusaurus, VitePress, Starlight?
-- CI/CD: автоматическая публикация, генерация changelog
-- Что выносить первым? Минимальный жизнеспособный продукт (MVP scope)
-
-## 10. Вопросы дизайна API
-
-- Как должен выглядеть простейший "hello world" для потребителя?
-- Сколько строк кода нужно, чтобы получить работающего ассистента с одним кастомным действием?
-- Нужен ли декларативный конфиг-подход И программный одновременно?
-- Как обрабатывать TypeScript-дженерики для аргументов инструментов (типобезопасные определения инструментов)?
-- Философия обработки ошибок — throw vs возврат Result-типа?
-
-## 11. Долгосрочное видение
-
-- Куда это движется через 2-3 года?
-- Мультимодальность (голос, зрение)?
-- Коммуникация агент-агент?
-- Интеграция с MCP (Model Context Protocol)?
-- Может ли это стать стандартом для "безопасных ИИ-действий в веб-приложениях"?
-- Есть ли путь к тому, чтобы стать фундаментом/стандартом, а не просто библиотекой?
+We are extracting the chat + tool-calling assistant logic from `mva-front` into a standalone library. The assistant should not just give advice—it must execute pre-approved, safe actions inside the application.
 
 ---
 
-## Порядок приоритетов (предложение)
+## 1. Library scope and architecture
 
-1. Глубоко исследовать существующие решения (раздел 4)
-2. Сформулировать уникальное ценностное предложение
-3. Спроектировать API (разделы 1, 2, 10)
-4. Выбрать лицензию (раздел 7)
-5. Собрать MVP
-6. Стратегия запуска в open source (раздел 6)
-7. План монетизации (раздел 8)
+- What belongs in the library?
+  - **Core only:** orchestrator, tool registry, request builder, response normalizer.
+  - **Core + UI:** also ship a headless or styled React chat component.
+  - **Core + UI + adapters:** add adapters for Vue, Svelte, vanilla JS.
+- Should the core be framework-agnostic (pure TS + optional bindings)?
+- How do we abstract over LLM providers? Current PoC targets Ollama (`qwen3-coder:30b`). Need adapter layer for OpenAI, Anthropic, local models, custom backends.
+- What do we do with the system prompt? Provide a default or require the consumer to pass it?
+- Should the library manage conversation state (messages, clarifications) or leave that to the consumer?
+- Streaming support: current implementation uses `stream: false`. Do we ship both streaming and non-streaming flows?
+- How does i18n work (current prompt/messages are in Russian)?
+
+## 2. Tooling model
+
+- How should consumers register their tools/actions? The current `toolRegistry.ts` is static—do we need a plugin API?
+- How do we express “this tool is only available when context X is present”?
+- Should the library validate tool arguments or should that remain the consumer’s job?
+- How are tool results handled (success, error, side effects)?
+- Do we support tool chains (one tool invoking another)?
+- Which description format do we target for LLMs—OpenAI function-calling, Anthropic tool-use, or our own abstraction?
+
+## 3. Security model
+
+- Key value proposition: “the assistant can only do what you allow.” How is that enforced in the library?
+- Do we need a permissions layer (e.g., tools that require user confirmation before execution)?
+- How do we mitigate prompt-injection attacks via user input?
+- Should the library sandbox tool execution?
+- Rate limiting / abuse protection—library responsibility or consumer responsibility?
+
+## 4. Existing solutions and competition
+
+- How does this compare to:
+  - **Vercel AI SDK** — streaming, tool calling, React hooks, multi-provider support.
+  - **LangChain.js** — agents, tools, chains.
+  - **CopilotKit** — in-app AI copilots with actions.
+  - **Assistant UI** — React components for AI chat.
+  - **OpenAI Assistants API** — server-side tool calls.
+  - **Anthropic Tool Use** — native tooling for Claude.
+- What’s the differentiator vs. these options?
+- Is “only safe, pre-defined actions” enough as a pitch?
+- Which market gap does this fill?
+
+## 5. Naming and positioning
+
+- Library name ideas—something that signals “an AI assistant that acts, not just chats.”
+- npm namespace availability.
+- Positioning options: “AI agent framework” vs. “assistant toolkit” vs. “chat SDK with tool calling”.
+- Target audience: front-end engineers adding AI to existing apps, or broader?
+
+## 6. Open-source strategy
+
+- Which model?
+  - Fully open (MIT/Apache 2.0) — maximum adoption.
+  - Open core — free core + paid extensions.
+  - Source available (BSL/SSPL) — code visible but commercial use restricted.
+- How to build a community around the project?
+- Governance model: single maintainer vs. organization?
+- Contributor guidelines from day one?
+- Platform choice: GitHub (larger reach) vs. GitLab (current project lives there)?
+
+## 7. Licensing
+
+- MIT — maximum freedom/distribution, no monetization protection.
+- Apache 2.0 — MIT-style plus patent grants.
+- AGPL — forces derivatives to stay open source (works for open-core play).
+- BSL — source available, becomes fully open after a grace period.
+- Dual licensing — OSS for open projects, commercial license for business.
+- How does the license choice impact adoption vs. monetization?
+- If open core: what stays in the free tier vs. premium?
+
+## 8. Monetization paths
+
+- **Open-core:** free library + paid premium features (analytics dashboard, enterprise tools, advanced security).
+- **Hosted service:** managed offering (LLM routing, tool execution monitoring).
+- **Marketplace:** paid tool/action plugins.
+- **Support & consulting:** enterprise support contracts.
+- **SaaS wrapper:** no-code/low-code builder on top of the SDK.
+- **LLM proxy:** routed through our API, pay-per-request (Vercel AI style).
+- Is monetizing a JS library in 2026 viable? Any successful examples?
+- Is the market large enough? Who pays?
+
+## 9. Technical execution plan
+
+- Package layout: monorepo (core, react, vue, etc.) or single package?
+- Build tooling: tsup, Vite library mode, unbuild?
+- Testing strategy: unit tests for the core, integration tests for framework bindings.
+- Documentation stack: Docusaurus, VitePress, Starlight?
+- CI/CD: auto-publish, changelog generation.
+- What ships first? Define the MVP scope.
+
+## 10. API design questions
+
+- What’s the simplest “hello world” for consumers?
+- How many lines does it take to get a working assistant with one custom action?
+- Should we offer both declarative config and programmatic APIs?
+- How do we expose TypeScript generics for tool arguments (type-safe definitions)?
+- Error-handling philosophy—throw vs. returning `Result` objects?
+
+## 11. Long-term vision
+
+- Where do we want this project to be in 2–3 years?
+- Multimodality (voice, vision)?
+- Agent-to-agent communication?
+- Integration with MCP (Model Context Protocol)?
+- Can this become the standard for “safe AI actions” in web apps?
+- Path to becoming infrastructure/standard rather than just another library?
+
+---
+
+## Suggested priority order
+
+1. Research existing solutions (section 4).
+2. Articulate the unique value proposition.
+3. Design the API (sections 1, 2, 10).
+4. Select the license (section 7).
+5. Build the MVP.
+6. Plan the open-source launch (section 6).
+7. Define monetization strategy (section 8).

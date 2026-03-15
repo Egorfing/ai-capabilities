@@ -1,34 +1,34 @@
 # Capability lifecycle status
 
-`npx ai-capabilities status` дает честный срез состояния каждой capability: от “просто найдена сканером” до “подключена и, скорее всего, исполнима”. Команда не заменяет `doctor/inspect`, а дополняет их, отображая статусы по ID и summary по проекту.
+`npx ai-capabilities status` provides an honest snapshot of every capability—starting from “discovered by the scanner” all the way to “wired and likely executable.” It does not replace `doctor`/`inspect`; it augments them with per-ID statuses and a project summary.
 
-## Статусы и надежность
+## Status definitions and reliability
 
-| Статус      | Источник                 | Надежность | Описание |
-| ----------- | ------------------------ | ---------- | -------- |
-| `discovered`| canonical manifest       | ✓ точный   | Capability присутствует в `output/ai-capabilities.json` |
-| `scaffolded`| `src/app-capabilities/**` | ✓ точный   | Найден scaffold/auto файл с этим `id` |
-| `authored`  | `defineCapability(*)`    | △ эвристика| На найденном файле нет TODO-placeholder, присутствует `defineCapability`. Если доказать нельзя — `unknown`. |
-| `registered`| `src/app-capabilities/registry.ts` | △ эвристика | Ищем `id` в стандартном registry. Кастомные registry → `unknown`. |
-| `wired`     | `new CapabilityRuntime`  | △ эвристика | Детектирует наличие runtime bootstrap в проекте. Это глобальный флаг, не per-capability. |
-| `executable`| derived (`authored && registered && wired`) | △ эвристика | “Выглядит исполнимым”. Не гарантирует успешный run-time вызов. |
+| Status      | Source                          | Reliability | Meaning |
+|-------------|---------------------------------|-------------|---------|
+| `discovered` | Canonical manifest              | ✓ exact     | Capability exists in `output/ai-capabilities.json`. |
+| `scaffolded` | `src/app-capabilities/**`       | ✓ exact     | A scaffold/auto-generated file with this `id` was found. |
+| `authored`   | `defineCapability*` files       | △ heuristic | A `defineCapability`-based file exists without a `TODO` placeholder. If the tool cannot prove it, the status is `unknown`. |
+| `registered` | `src/app-capabilities/registry.ts` | △ heuristic | Searches for the `id` in the default registry. Custom registries → `unknown`. |
+| `wired`      | `new CapabilityRuntime` detected | △ heuristic | Global flag indicating that the project instantiates a runtime. Not evaluated per capability. |
+| `executable` | Derived (`authored && registered && wired`) | △ heuristic | “Looks executable.” Not a runtime guarantee—smoke tests are still required. |
 
-`unknown` — нормальный результат, означающий, что инструмент не смог доказать состояние (например, registry нестандартный). Лучше `unknown`, чем ложный `no`.
+`unknown` is a valid result meaning the tool could not prove the state (e.g., nonstandard registry). It is better to return `unknown` than to guess incorrectly.
 
-## Пример note / next step
+## Example notes / next steps
 
-- `Handler TODO placeholder detected` — scaffold еще не реализован.
-- `Not found in registry.ts` — capability не зарегистрирована в стандартном registry.
-- `Add registry wiring to CapabilityRuntime` — runtime не найден.
+- `Handler TODO placeholder detected` — scaffold exists but the handler is not implemented.
+- `Not found in registry.ts` — capability is missing from the default registry.
+- `Add registry wiring to CapabilityRuntime` — runtime bootstrap not detected.
 
-## Как читать отчёт
+## How to read the report
 
-1. Смотрите summary (сколько capability “застряли” на определённом этапе).
-2. Смотрите строки и колонку `Notes`, чтобы понять следующий шаг.
-3. Для публикуемых capability всё равно нужно держать manifest актуальным — status команда не меняет discovery/public semantics.
+1. Look at the summary to see how many capabilities are stuck in each phase.
+2. Inspect per-capability rows and the `Notes` column to decide the next action.
+3. Keep the manifest fresh for publishable capabilities—this command does not change discovery/public semantics.
 
-## Ограничения
+## Limitations
 
-- Кастомные registry/runtime wiring могут не обнаружиться → `unknown`.
-- Если capability определена вне `src/app-capabilities/**`, статус может быть `unknown`.
-- Автоматическое определение “executable” — это просто сигнал, что всё выглядит подключённым. Фактический smoke-test по-прежнему надо делать вручную.
+- Custom registries or runtime wiring may not be detected, resulting in `unknown`.
+- Capabilities defined outside `src/app-capabilities/**` may also end up as `unknown`.
+- The automatic “executable” flag is only a signal that everything appears wired. Manual smoke tests are still mandatory before exposing a capability.

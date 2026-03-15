@@ -1,14 +1,15 @@
 # HTTP server
 
-`npm run serve` поднимает тонкий транспорт поверх runtime/policy/trace. Сервер не создаёт runtime самостоятельно — зависимости передаются через `createServer`.
+`npm run serve` exposes a thin transport layer on top of the runtime/policy/trace stack. The server does **not** create a runtime for you—dependencies are passed via `createServer`.
 
-## Режимы
-- `internal` (по умолчанию) — доступ ко всем capabilities из canonical manifest.
-- `public` (`npm run serve -- --public`) — использует public manifest и автоматически выставляет runtime mode `public`.
+## Modes
+- `internal` (default) — grants access to every capability in the canonical manifest.
+- `public` (`npm run serve -- --public`) — uses the public manifest and forces the runtime into public mode.
 
-> ⚠️ Public discovery выключен по умолчанию. Пока рядом с сервером нет `output/ai-capabilities.public.json`, `/.well-known/ai-capabilities.json` вернёт 404. Сгенерируйте файл через `npx ai-capabilities extract` или `npx ai-capabilities manifest public`. Dev override `--unsafe-public-fallback` можно включить явно, но он логирует предупреждение и не предназначен для production.
+> ⚠️ Public discovery is disabled until a public manifest is supplied. Without `output/ai-capabilities.public.json`, `/.well-known/ai-capabilities.json` returns HTTP 404. Generate the file via `npx ai-capabilities extract` or `npx ai-capabilities manifest public`. The `--unsafe-public-fallback` flag enables on-the-fly filtering but logs a warning and is not intended for production.
 
 ## Endpoints
+
 ### GET /health
 ```json
 {
@@ -25,11 +26,12 @@
 ```
 
 ### GET /capabilities
-- Без фильтров возвращает весь manifest (canonical или public).
-- Query-параметры: `visibility`, `kind`, `capabilityId`.
-- Ответ: `{ status: "success", data: { capabilities: [...] } }`.
+- Returns the entire manifest (canonical or public).
+- Query params: `visibility`, `kind`, `capabilityId`.
+- Response: `{ status: "success", data: { capabilities: [...] } }`.
 
 ### POST /execute
+
 **Request**
 ```json
 {
@@ -43,6 +45,7 @@
   }
 }
 ```
+
 **Response (success)**
 ```json
 {
@@ -51,42 +54,46 @@
   "meta": { "capabilityId": "api.orders.list-orders", "durationMs": 5 }
 }
 ```
+
 **Response (policy pending)** → HTTP 409, `status: "error"`, `error.code = "POLICY_CONFIRMATION_REQUIRED"`.
 
 ### GET /traces
-- Читает события из `output/traces`.
-- Поддерживает query `traceId`, `stage`, `level`, `capabilityId`.
-- Возвращает `{ items: [...], total }`.
+- Reads trace events from `output/traces`.
+- Supports queries: `traceId`, `stage`, `level`, `capabilityId`.
+- Returns `{ items: [...], total }`.
 
 ### GET /.well-known/ai-capabilities.json
-- Публикует public manifest + discovery info **только когда public manifest был передан серверу**.
-- При отсутствии файла возвращает `404 PUBLIC_MANIFEST_MISSING`.
-- Ответ содержит `discovery.executionEndpoint`, `interaction` и `capabilities` (без handlerRef/metadata).
+- Publishes the public manifest + discovery info **only when a public manifest is supplied**.
+- Missing file → `404 PUBLIC_MANIFEST_MISSING`.
+- Response includes `discovery.executionEndpoint`, `interaction`, and sanitized `capabilities`.
 
-## Трассировка
-- Каждый HTTP запрос получает `traceId`.
-- Транспорт пишет события: `http.request`, `http.response`, `http.execute.*` и т.д., используя `createTraceWriter`.
+## Tracing
+- Every HTTP request receives a `traceId`.
+- The transport logs `http.request`, `http.response`, `http.execute.*`, etc., via `createTraceWriter`.
 
-## Ошибки
-| Код | Когда |
+## Error codes
+
+| Code | When |
 | --- | --- |
-| 400 | Невалидный payload / schema.
-| 403 | Policy deny / private capability в public режиме.
-| 404 | Capability или маршрут не найден.
-| 409 | Confirmation pending.
-| 500 | Ошибка runtime/handler.
+| 400 | Invalid payload/schema. |
+| 403 | Policy denied / private capability in public mode. |
+| 404 | Capability or route not found. |
+| 409 | Confirmation pending. |
+| 500 | Runtime/handler error. |
 
-## Запуск
+## Running the server
+
 ```bash
 npm run serve -- --config fixtures/config/basic/ai-capabilities.config.json --host 127.0.0.1 --port 4000
 npm run serve -- --config ... --public # public mode
-npm run serve -- --unsafe-public-fallback # dev only, синтезирует public manifest на лету
+npm run serve -- --unsafe-public-fallback # dev only, synthesizes public manifest on the fly
 ```
 
-Сервер не включает auth/rate limiting и предназначен для локальных/внутренних сетей.
+The server does not include auth/rate limiting; it is intended for local/internal networks.
 
-### Публикация public manifest
-Public manifest генерируется автоматически во время `npx ai-capabilities extract`, но его можно собирать отдельно:
+### Publishing the public manifest
+
+`npx ai-capabilities extract` generates the public manifest automatically, but you can rebuild it on demand:
 
 ```bash
 npx ai-capabilities manifest public \
@@ -94,10 +101,11 @@ npx ai-capabilities manifest public \
   --output ./output/ai-capabilities.public.json
 ```
 
-Добавьте этот шаг в CI перед запуском HTTP runtime, чтобы discovery никогда не использовал устаревший snapshot.
+Add this to CI before starting the HTTP runtime to ensure discovery never serves stale data.
 
 ## Express / Node middleware
-Если у вас уже есть Express-приложение и не хочется поднимать отдельный HTTP server, используйте `createAiCapabilitiesMiddleware` из `ai-capabilities/server`:
+
+Already have an Express app and don’t want a standalone server? Use `createAiCapabilitiesMiddleware` from `ai-capabilities/server`:
 
 ```ts
 import express from "express";
@@ -112,30 +120,29 @@ app.use(
     runtime,
     manifest,
     mode: "public",
-    basePath: "/ai", // опционально (по умолчанию корень)
+    basePath: "/ai", // optional (defaults to root)
   }),
 );
 
 app.listen(3000);
 ```
 
-Мидлвар автоматически экспонирует:
+The middleware exposes:
+- `GET /.well-known/ai-capabilities.json` (or `/ai/.well-known/...` when `basePath` is set).
+- `GET /capabilities` — canonical manifest (auto-filtered in public mode).
+- `POST /execute` — delegates to `CapabilityRuntime`.
 
-- `GET /.well-known/ai-capabilities.json` (или `/ai/.well-known/...` при `basePath`).
-- `GET /capabilities` — canonical manifest (в public mode автоматически фильтруется).
-- `POST /execute` — делегирует в `CapabilityRuntime`.
+### Options
 
-Опции:
-
-| Параметр | Обязателен | Описание |
+| Option | Required | Description |
 | --- | --- | --- |
-| `runtime` | ✅ | Готовый `CapabilityRuntime`. |
-| `manifest` | ✅\* | Canonical manifest. Если не передать, будет вызван `runtime.getManifest()`. |
-| `manifestProvider` | ❌ | Альтернатива `manifest` — функция, возвращающая manifest на каждый запрос. |
-| `publicManifest` | ✅\*\* | Предподготовленный public manifest (обязателен для public mode и discovery; fallback разрешён только при `allowUnsafePublicFallback`). |
-| `mode` | ❌ | `"internal"` (по умолчанию) или `"public"`. |
-| `basePath` | ❌ | Префикс маршрутов (`/ai`, `/internal/tools`, и т.п.). |
-| `jsonBodyLimit` | ❌ | Лимит на размер JSON (по умолчанию 1 МБ). |
-| `allowUnsafePublicFallback` | ❌ | Dev-флаг: если `true`, middleware будет фильтровать canonical manifest на лету, даже если `publicManifest` не передан. Не используйте в production. |
+| `runtime` | ✅ | Instance of `CapabilityRuntime`. |
+| `manifest` | ✅* | Canonical manifest. If omitted, `runtime.getManifest()` is used. |
+| `manifestProvider` | ❌ | Function returning a manifest per request (alternative to `manifest`). |
+| `publicManifest` | ✅** | Pre-built public manifest (required for public mode & discovery unless `allowUnsafePublicFallback` is true). |
+| `mode` | ❌ | `"internal"` (default) or `"public"`. |
+| `basePath` | ❌ | Route prefix (`/ai`, `/internal/tools`, etc.). |
+| `jsonBodyLimit` | ❌ | Max JSON payload size (default 1 MB). |
+| `allowUnsafePublicFallback` | ❌ | Dev flag: filter canonical manifest on the fly when no public manifest is supplied. Do not use in production. |
 
-Пример (`examples/express-app`) регистрирует безопасный read-capability `api.orders.list-orders`, монтирует middleware в public режиме и демонстрирует полную цепочку discovery → execution с помощью клиентского SDK.
+See `examples/express-app` for a runnable sample that registers a safe read capability, mounts the middleware in public mode, and demonstrates discovery → execution with the client SDK.

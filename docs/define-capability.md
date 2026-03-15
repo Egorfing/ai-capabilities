@@ -1,23 +1,23 @@
 # defineCapability helper
 
-`defineCapability` — тонкий слой DX, который объединяет схему, metadata и handler в одном файле. Он не меняет runtime/manifest архитектуру, а помогает разработчикам быстрее описать capability и зарегистрировать её в `CapabilityRegistry`. Для случаев, когда вы начинаете с уже извлечённого хука (`hook.create-project-mutation`), используйте `defineCapabilityFromExtracted` — он повторно использует все поля helper-а, но дополнительно сохраняет `sourceId` в `metadata.extractedSourceId`, чтобы вы никогда не потеряли связь с исходной находкой `inspect/extract`.
+`defineCapability` is a lightweight DX layer that keeps schema, metadata, policy, and the handler together in a single file. It does **not** change the runtime or manifest architecture—it simply makes it easier for developers to author capabilities and register them in `CapabilityRegistry`. When you start from something that was already discovered by `inspect`/`extract` (for example `hook.create-project-mutation`), use `defineCapabilityFromExtracted`. It shares the same API but also stores the `sourceId` inside `metadata.extractedSourceId` so you never lose the link back to the original extractor result.
 
 ## Authoring standard
-- **Discovery vs execution:** `inspect`/`extract` tell you what exists, but only `defineCapability*` files describe what the agent is allowed to execute. Treat these helpers as the official DSL for executable capabilities.
-- **Traceability:** `defineCapabilityFromExtracted` keeps `sourceId` so you can cite the original hook (openapi operation, React Query hook, etc.) inside manifests, documentation, and AGENTS workflows.
-- **Consistency:** Every capability under `src/app-capabilities/**` should follow one of these helpers so schemas, policies, and handlers stay reviewable and easy for LLMs to understand.
-- **Tooling:** `npx ai-capabilities scaffold` and `npx ai-capabilities auto-bind` both emit files that already use these helpers; adopt the same pattern for manual authoring.
+- **Discovery vs. execution:** `inspect`/`extract` only tell you what exists. Files created with `defineCapability*` describe what the agent is allowed to execute. Treat these helpers as the official DSL for executable capabilities.
+- **Traceability:** `defineCapabilityFromExtracted` preserves `sourceId`, making it trivial to cite the original OpenAPI operation, React Query hook, etc., in manifests, docs, and AGENTS workflows.
+- **Consistency:** Every capability under `src/app-capabilities/**` should use one of these helpers so schemas, policies, and handlers remain reviewable and LLM-friendly.
+- **Tooling alignment:** `npx ai-capabilities scaffold` and `npx ai-capabilities auto-bind` already emit files built on top of these helpers; manual authoring should follow the same pattern.
 
-Philosophy: extracted capabilities describe *what the app exposes internally*, whereas authored capabilities describe *what the AI agent is trusted to execute*. The helpers bridge that gap.
+**Philosophy:** extracted capabilities describe what the app exposes internally, while authored capabilities describe what the AI agent is trusted to execute. The helpers bridge that gap.
 
-## Когда использовать
-- вы описываете capability вручную и хотите держать schema + policy + handler рядом;
-- вы scaffold-ите проект через `npx ai-capabilities init` (пример уже использует helper);
-- вы хотите создать self-documented capability, понятную LLM и коллегам.
+## When to use it
+- You want schema + policy + handler co-located in a self-documented module.
+- You bootstrapped via `npx ai-capabilities init` (the example already uses this helper).
+- You need capabilities that are easy to review, easy to lint, and easy for LLMs to understand.
 
-Если вам нужно вручную управлять registry/handlers (например, динамическая регистрация или нестандартные execution стратегии) — низкоуровневый API остаётся доступным.
+If you must control registry wiring manually (dynamic registration, custom execution engines, etc.), the low-level API remains available—you can still call `registry.register` directly.
 
-## Базовый пример
+## Basic example
 ```ts
 import { defineCapability } from "ai-capabilities";
 
@@ -28,21 +28,21 @@ export const exampleEchoCapability = defineCapability({
   inputSchema: {
     type: "object",
     properties: { text: { type: "string" } },
-    required: ["text"]
+    required: ["text"],
   },
   policy: {
     visibility: "internal",
     riskLevel: "low",
-    confirmationPolicy: "none"
+    confirmationPolicy: "none",
   },
   metadata: { tags: ["example"] },
   async execute({ text }) {
     return { echoed: text, length: text.length };
-  }
+  },
 });
 ```
 
-## Реалистичный пример (`projects.create`)
+## Realistic mutation example (`projects.create`)
 ```ts
 import { defineCapability } from "ai-capabilities";
 import { projectApi } from "../services/projectApi";
@@ -56,32 +56,32 @@ export const projectsCreateCapability = defineCapability({
     type: "object",
     properties: {
       name: { type: "string", minLength: 3 },
-      description: { type: "string" }
+      description: { type: "string" },
     },
-    required: ["name"]
+    required: ["name"],
   },
   outputSchema: {
     type: "object",
     properties: {
       id: { type: "string" },
-      name: { type: "string" }
-    }
+      name: { type: "string" },
+    },
   },
   tags: ["projects", "workspace"],
   exampleIntents: ["Create a workspace project called Revenue Ops"],
   policy: {
     visibility: "internal",
     riskLevel: "medium",
-    confirmationPolicy: "once"
+    confirmationPolicy: "once",
   },
   async execute({ name, description }) {
     return projectApi.create({ name, description });
-  }
+  },
 });
 ```
 
-## Промоут извлечённой capability
-Если `inspect` показал `hook.create-project-mutation`, не нужно переписывать всё с нуля:
+## Promoting an extracted capability
+`inspect` surfaced `hook.create-project-mutation`? No need to rebuild everything manually:
 
 ```ts
 import { defineCapabilityFromExtracted } from "ai-capabilities";
@@ -111,9 +111,9 @@ export const projectsCreateCapability = defineCapabilityFromExtracted({
 });
 ```
 
-`defineCapabilityFromExtracted` автоматически добавляет `metadata.extractedSourceId`, благодаря чему любой runtime/manifest/документация могут отследить связь с исходным hook'ом.
+`defineCapabilityFromExtracted` automatically annotates the capability with `metadata.extractedSourceId`, so manifests, registries, and docs can always trace it back to the source hook.
 
-### Read-capability пример (`hook.projects-query`)
+### Read-capability example (`hook.projects-query`)
 ```ts
 import { defineCapabilityFromExtracted } from "ai-capabilities";
 import { projectApi } from "../services/projectApi";
@@ -126,35 +126,39 @@ export const projectsListCapability = defineCapabilityFromExtracted({
   inputSchema: {
     type: "object",
     properties: {
-      limit: { type: "number", minimum: 1, maximum: 100, default: 20 }
-    }
+      limit: { type: "number", minimum: 1, maximum: 100, default: 20 },
+    },
   },
   policy: {
     visibility: "internal",
     riskLevel: "low",
-    confirmationPolicy: "none"
+    confirmationPolicy: "none",
   },
   async execute({ limit = 20 }: { limit?: number }) {
     return projectApi.list({ limit });
-  }
+  },
 });
 ```
 
-## Генерация scaffold через CLI
-Когда `inspect`/`extract` показывают нужный hook, запустите:
+## CLI scaffolding
+When `inspect`/`extract` highlight a candidate, run:
+
 ```bash
 npx ai-capabilities scaffold --id hook.create-project-mutation
 ```
-Опциональные флаги:
-- `--manifest ./output/ai-capabilities.json` — использовать конкретный canonical manifest.
-- `--dir ./src/app-capabilities/capabilities` — контролировать директорию для файлов.
 
-Команда создаёт файл вроде `createProjectCapability.ts`, сразу подключает `defineCapabilityFromExtracted`, копирует `displayTitle`/`description`/`schema`, добавляет `metadata.extractedSourceId` и оставляет `execute` с понятным TODO. После генерации:
-1. Обновите `id` на канонический (`projects.create`).
-2. Допишите `execute`.
-3. Зарегистрируйте capability через `registerCapabilityDefinitions`.
+Useful flags:
+- `--manifest ./output/ai-capabilities.json` – point to a specific canonical manifest.
+- `--dir ./src/app-capabilities/capabilities` – choose the output directory.
 
-## Регистрация в runtime
+The command creates a file such as `createProjectCapability.ts` that already uses `defineCapabilityFromExtracted`, copies over `displayTitle`/`description`/`schemas`, sets `metadata.extractedSourceId`, and leaves a clear `TODO` inside `execute`.
+
+After scaffolding:
+1. Update `id` to the canonical identifier (`projects.create`).
+2. Implement the handler.
+3. Register the capability via `registerCapabilityDefinitions`.
+
+## Registering with the runtime
 ```ts
 import { CapabilityRegistry, registerCapabilityDefinitions } from "ai-capabilities";
 import { capabilities } from "./ai-capabilities";
@@ -162,10 +166,10 @@ import { capabilities } from "./ai-capabilities";
 const registry = new CapabilityRegistry();
 registerCapabilityDefinitions(registry, capabilities);
 ```
-`registerCapabilityDefinitions` всего лишь вызывает `registry.register(id, handler)` для каждого helper-определения, поэтому любые существующие биндинги останутся совместимыми.
 
-### Передача handlerContext
-Когда runtime исполняет capability, можно передать UI-контекст:
+`registerCapabilityDefinitions` simply loops through every helper definition and calls `registry.register(id, handler)`, so existing bindings remain compatible.
+
+### Passing `handlerContext`
 ```ts
 await runtime.execute(request, {
   handlerContext: {
@@ -174,27 +178,28 @@ await runtime.execute(request, {
   },
 });
 ```
-Этот объект доступен внутри `execute` (второй параметр). Для подробностей см. [frontend-actions.md](./frontend-actions.md). Если нужно быстро заполнить схему/metadata с помощью coding assistant, воспользуйтесь промптами и CLI helper из [docs/llm-prompt.md](./llm-prompt.md) или командой `npx ai-capabilities prompt`.
 
-## Поля определения
-| Поле | Обязательное | Описание |
-| ---- | ------------ | -------- |
-| `id` | да | Канонический идентификатор capability. |
-| `displayTitle` | да | Человеко-понятный заголовок (используют агенты и UI). |
-| `description` | да | Короткое описание действия. |
-| `inputSchema` | да | JSON Schema входа. |
-| `outputSchema` | нет | JSON Schema ответа (если хотите строгую типизацию). |
-| `aliases` / `exampleIntents` | нет | Помогают LLM понять назначение capability. |
-| `tags` | нет | Тематические метки. |
-| `policy` | нет | `visibility`, `riskLevel`, `confirmationPolicy`. |
-| `metadata` | нет | Любые дополнительные поля для downstream процессов. |
-| `execute` | да | Handler, принимающий валидированный input. |
+The object you provide becomes the second argument of every `execute` handler. See [docs/frontend-actions.md](./frontend-actions.md) for adapter details. Need help filling schemas or metadata? Use the prompts in [docs/llm-prompt.md](./llm-prompt.md) or run `npx ai-capabilities prompt`.
 
-## Когда опускаться на низкий уровень
-- Нужен кастомный жизненный цикл регистрации handlers.
-- Capability создаётся автоматически extractor-ом.
-- Требуется собственный формат schema/metadata.
+## Field reference
+| Field | Required | Description |
+| --- | --- | --- |
+| `id` | Yes | Canonical capability identifier. |
+| `displayTitle` | Yes | Human-readable title shown to agents and UI. |
+| `description` | Yes | Short explanation of the action. |
+| `inputSchema` | Yes | JSON Schema describing the input payload. |
+| `outputSchema` | No | JSON Schema of the response (useful for typed clients). |
+| `aliases` / `exampleIntents` | No | Help LLMs understand additional phrasings. |
+| `tags` | No | Thematic grouping labels. |
+| `policy` | No | `visibility`, `riskLevel`, `confirmationPolicy`. |
+| `metadata` | No | Arbitrary fields for downstream tooling. |
+| `execute` | Yes | Async handler that receives validated input. |
 
-Helper не блокирует эти сценарии — просто не используйте его и продолжайте вызывать `registry.register(...)` напрямую.
+## When to drop to the low-level API
+- You need a custom lifecycle for registering handlers.
+- Capabilities are generated entirely by an extractor.
+- You require bespoke schema/metadata formats.
 
-> Need guidance on which policy values to choose? Follow the recommendations in [docs/security-model.md](./security-model.md) — it defines visibility, risk levels, confirmation policies, and the safe pilot rollout flow.
+The helper does not block these cases—just skip it and continue to call `registry.register(...)` directly.
+
+> Need policy guidance? Follow [docs/policy.md](./policy.md) for recommended values (`visibility`, `riskLevel`, `confirmationPolicy`) and rollout practices.

@@ -1,7 +1,10 @@
 import { defineCapability } from "ai-capabilities";
-import { listProjects } from "../../data/projectStore.js";
+import { listProjects, type ProjectWithTodos } from "../../data/projectStore";
 
-export const listProjectsCapability = defineCapability({
+export const listProjectsCapability = defineCapability<
+  { limit?: number },
+  { projects: ProjectWithTodos[] }
+>({
   id: "projects.list",
   kind: "read",
   displayTitle: "List workspace projects",
@@ -24,6 +27,19 @@ export const listProjectsCapability = defineCapability({
             name: { type: "string" },
             description: { type: "string" },
             createdAt: { type: "string", format: "date-time" },
+            todos: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  id: { type: "string" },
+                  projectId: { type: "string" },
+                  title: { type: "string" },
+                  completed: { type: "boolean" },
+                  createdAt: { type: "string", format: "date-time" },
+                },
+              },
+            },
           },
         },
       },
@@ -36,8 +52,8 @@ export const listProjectsCapability = defineCapability({
     riskLevel: "low",
     confirmationPolicy: "none",
   },
-  execute: async ({ limit = 10 }) => {
-    const projects = listProjects().slice(0, limit);
-    return { projects };
+  execute: async ({ limit = 10 }: { limit?: number }) => {
+    const projects = await listProjects();
+    return { projects: projects.slice(0, limit) };
   },
 });

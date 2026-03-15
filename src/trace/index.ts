@@ -12,7 +12,8 @@ export type {
 } from "./trace-types.js";
 
 // Store / IDs
-export { generateTraceId, traceFilePath, traceDateFolder } from "./trace-store.js";
+export { generateTraceId } from "./trace-id.js";
+export { traceFilePath, traceDateFolder } from "./trace-store.js";
 
 // Writer implementations
 export {

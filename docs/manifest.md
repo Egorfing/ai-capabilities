@@ -1,15 +1,16 @@
-# Manifest и артефакты
+# Manifest & artifacts
 
-Manifest — главный контракт между extractors, adapters, runtime и внешними агентами. Он строится в несколько стадий.
+The manifest is the core contract between extractors, adapters, the runtime, and external agents. It is produced in several stages.
 
 ## Raw manifest — `capabilities.raw.json`
-- **Источник:** `npm run extract` (`runPipeline` + `mergeCapabilities`).
-- **Содержимое:** массив `RawCapability` с полями `id`, `source`, `kind`, `inputSchema`, `metadata`, diagnostics meta.
-- **Назначение:** дебаг извлечения. Содержит исходные `source.filePath`, необработанные схемы и служебные метки.
-- **Менять можно:** структуру raw capabilities, если меняется extractor.
-- **Нельзя:** полагаться на raw manifest в runtime; он не очищен от чувствительных данных.
+- **Source:** `npm run extract` (`runPipeline` + `mergeCapabilities`).
+- **Content:** array of `RawCapability` objects (`id`, `source`, `kind`, `inputSchema`, `metadata`, diagnostic metadata).
+- **Purpose:** debugging extraction. Includes original `source.filePath`, unprocessed schemas, and helper tags.
+- **Allowed:** adjust raw capability structure when extractors change.
+- **Forbidden:** rely on raw manifest at runtime—it may contain sensitive data.
 
-Пример (demo fixture):
+Example (demo fixture):
+
 ```json
 {
   "id": "api.orders.list-orders",
@@ -25,15 +26,16 @@ Manifest — главный контракт между extractors, adapters, ru
 ```
 
 ## Canonical manifest — `ai-capabilities.json`
-- **Источник:** `buildAiCapabilitiesManifest`.
-- **Назначение:** единый контракт для adapters/runtime/policy.
-- **Характеристики:**
-  - Поля `displayTitle`, `description`, `policy`, `execution`, `sources`, `effects` приведены к нормальной форме.
-  - Содержит `diagnostics?: undefined` и `metadata` только для внутренних целей.
-  - Использует overrides из `config.policy.overrides` (visibility/risk/confirmation/permissions/tags).
-- **Source of truth:** canonical manifest = единственный документ, который adapters и runtime читают напрямую.
+- **Source:** `buildAiCapabilitiesManifest`.
+- **Purpose:** single contract for adapters/runtime/policy.
+- **Characteristics:**
+  - Normalizes `displayTitle`, `description`, `policy`, `execution`, `sources`, `effects`.
+  - Removes diagnostics-only data; `metadata` is internal.
+  - Applies `config.policy.overrides` (visibility/risk/confirmation/permissions/tags).
+- **Source of truth:** canonical manifest is what adapters and runtimes read directly.
 
-Фрагмент:
+Snippet:
+
 ```json
 {
   "id": "api.orders.list-orders",
@@ -52,23 +54,24 @@ Manifest — главный контракт между extractors, adapters, ru
 ```
 
 ## Public manifest — `ai-capabilities.public.json`
-- **Источник:** результат фильтрации canonical manifest по `policy.visibility === "public"` + sanitization.
-- **Назначение:** внешний surface для discovery/well-known и будущих публичных агентов.
-- **Особенности:**
-  - `execution.handlerRef`, `metadata`, любые `source.filePath` вырезаются.
-  - Только public capabilities.
-  - Остаётся синхронным с canonical manifest по `manifestVersion`/`generatedAt`.
-- **Нельзя:** добавлять поля, которые раскрывают внутренние implementation details.
+- **Source:** filter canonical manifest by `policy.visibility === "public"`, then sanitize.
+- **Purpose:** public discovery surface for `.well-known` and external agents.
+- **Notes:**
+  - Removes `execution.handlerRef`, `metadata`, any `source.filePath`.
+  - Contains public capabilities only.
+  - Stays in sync with the canonical manifest (`manifestVersion`/`generatedAt`).
+- **Forbidden:** add fields that reveal internal implementation details.
 
 ## Enriched manifest — `ai-capabilities.enriched.json`
-- **Источник:** `npm run enrich` / `runEnrichment` поверх canonical manifest.
-- **Назначение:** UX-улучшения (aliases, example intents, display hints).
-- **Гарантии:**
-  - Не меняет `policy`, `inputSchema`, `execution`.
-  - Может дополнять `displayTitle`, `userDescription`, `aliases`, `exampleIntents`.
-  - Если enrichment не удался, capability остаётся как в canonical manifest.
+- **Source:** `npm run enrich` / `runEnrichment` on top of the canonical manifest.
+- **Purpose:** UX improvements (aliases, example intents, display hints).
+- **Guarantees:**
+  - Does not change `policy`, `inputSchema`, or `execution`.
+  - May extend `displayTitle`, `userDescription`, `aliases`, `exampleIntents`.
+  - If enrichment fails, the capability stays identical to the canonical manifest.
 
-Фрагмент enriched:
+Example:
+
 ```json
 {
   "id": "api.orders.list-orders",
@@ -80,13 +83,13 @@ Manifest — главный контракт между extractors, adapters, ru
 }
 ```
 
-## Правила неизменности
-- Canonical manifest нельзя редактировать вручную; он всегда пересобирается из raw capabilities.
-- Public manifest содержит минимум полей и не должен ссылаться на handler/internal metadata.
-- Enriched manifest — производная копия canonical manifest; при сомнениях нужно пересоздать canonical → enriched, а не редактировать enriched напрямую.
-- Все версии manifest синхронизированы по `manifestVersion` и `generatedAt`; golden tests провалятся, если структура изменится без обновления фикстур.
+## Invariance rules
+- Never edit the canonical manifest manually—it’s always rebuilt from raw capabilities.
+- The public manifest must stay minimal and must not reference handlers/internal metadata.
+- The enriched manifest is a derivative. When in doubt, regenerate canonical → enriched rather than editing enriched directly.
+- All manifest versions share `manifestVersion` and `generatedAt`; golden tests will fail if structure changes without fixture updates.
 
-## Где искать manifest
-- По умолчанию (`ai-capabilities.config.json`) пишет в `./output/` рядом с конфигом.
-- Pilot runner складывает артефакты в `output/` проекта и дублирует пути в `pilot-report.json` → `artifacts`.
-- Demo fixture golden файлы лежат в `fixtures/golden/demo-app` — используйте их как образцы при добавлении новых полей.
+## Where to find manifests
+- By default (per `ai-capabilities.config.json`) they are written to `./output/` next to the config.
+- The pilot runner stores artifacts in the project’s `output/` folder and records paths inside `pilot-report.json → artifacts`.
+- Demo fixture golden files live in `fixtures/golden/demo-app`—use them as references when adding new fields.

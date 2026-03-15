@@ -21,9 +21,9 @@ import {
   policyDenied,
   policyConfirmationRequired,
 } from "./runtime-errors.js";
-import type { TraceWriter } from "../trace/index.js";
-import { runtimeEvent, policyEvent } from "../trace/index.js";
-import { generateTraceId } from "../trace/index.js";
+import type { TraceWriter } from "../trace/trace-types.js";
+import { runtimeEvent, policyEvent } from "../trace/trace-utils.js";
+import { generateTraceId } from "../trace/trace-id.js";
 
 export interface CapabilityRuntimeOptions {
   manifest: AiCapabilitiesManifest;

@@ -1,8 +1,9 @@
 # Pilot runner
 
-Pilot runner orchestrates extraction → manifest → enrichment → report для реального приложения и фиксирует результат.
+The pilot runner orchestrates extraction → manifest generation → enrichment → reporting for a real application and captures the results in one place.
 
-## Как запустить
+## How to run
+
 ```bash
 npm run pilot -- \
   --project ../real-app \
@@ -10,23 +11,26 @@ npm run pilot -- \
   --with-enrich \
   --report-dir ../real-app/output/pilot
 ```
-Аргументы:
-- `--project` — путь к целевому проекту (переопределяет `config.project.root`).
-- `--config` — явный конфиг (если не указан, ищется относительно CWD).
-- `--with-enrich` — дополнительно запускает enrichment.
-- `--report-dir` — куда сохранить `pilot-report.json` и `pilot-summary.md` (по умолчанию рядом с canonical manifest).
 
-## Что происходит
-1. Загружается конфиг, резолвятся пути и output директории.
-2. `runCompatibilityChecks` удостоверяется, что проект/tsconfig/spec пути существуют.
-3. Extraction pipeline генерирует raw manifest и diagnostics.
-4. Canonical/public manifest записываются согласно конфигу.
-5. (опционально) Enrichment создаёт `ai-capabilities.enriched.json`.
-6. Diagnostics + unsupported patterns агрегируются.
-7. Пишутся отчёты + трассировки.
+Arguments:
+- `--project` — target project path (overrides `config.project.root`).
+- `--config` — explicit config file (otherwise resolved relative to CWD).
+- `--with-enrich` — run enrichment after building the canonical manifest.
+- `--report-dir` — where to store `pilot-report.json` and `pilot-summary.md` (defaults to the manifest directory).
 
-## Артефакты
-`pilot-report.json` (machine-readable) и `pilot-summary.md` (Markdown). Пример summary:
+## What happens
+1. Load the config, resolve project/output paths.
+2. `runCompatibilityChecks` ensures project/tsconfig/spec paths exist.
+3. The extraction pipeline generates the raw manifest + diagnostics.
+4. Canonical/public manifests are written according to the config.
+5. (Optional) Enrichment creates `ai-capabilities.enriched.json`.
+6. Diagnostics and unsupported patterns are aggregated.
+7. Reports + traces are saved.
+
+## Artifacts
+
+The runner emits `pilot-report.json` (machine-readable) and `pilot-summary.md` (Markdown). Example summary:
+
 ```
 # Pilot Summary
 - **Status:** success
@@ -37,25 +41,26 @@ npm run pilot -- \
 - **Trace ID:** __SNAPSHOT_ID__
 ...
 ```
-Report включает поля:
-- `status`: `success`, `partial`, `failed`.
+
+Report fields include:
+- `status`: `success`, `partial`, or `failed`.
 - `summary.capabilitiesTotal` / `publicCapabilities`.
-- `diagnostics` count.
-- `extractors[]` со статусом каждого extractor.
-- `compatibility.errors/warnings`.
-- `artifacts` с относительными путями к manifest/trace/report файлам.
-- `unsupportedPatterns`: массив нормализованных warning сообщений.
+- `diagnostics` counts.
+- `extractors[]` with per-extractor outcomes.
+- `compatibility.errors` / `compatibility.warnings`.
+- `artifacts` listing relative paths to manifests/traces/reports.
+- `unsupportedPatterns`: normalized warning strings.
 
-## Статусы
-- **Success** — extraction/manifest завершены, ошибок нет.
-- **Partial** — manifest создан, но есть warnings/errors (например, enrichment не прошёл).
-- **Failed** — совместимость не пройдена или extraction упал до создания manifest.
+## Status meanings
+- **Success** — extraction + manifest completed with no errors.
+- **Partial** — manifest built but warnings/errors occurred (e.g., enrichment failed).
+- **Failed** — compatibility failed or extraction crashed before producing a manifest.
 
-## Как читать unsupported patterns
-- Список строится из diagnostics с ключевыми словами `unsupported`/`not supported`.
-- Используйте его как backlog для следующих этапов — либо расширяйте extractors, либо документируйте ограничения.
+## Understanding unsupported patterns
+- Built from diagnostics containing `unsupported`/`not supported` keywords.
+- Treat the list as a backlog for future extractor work or documentation updates.
 
-## Советы
-- Храните отчёты в репозитории проекта → проще отслеживать прогресс пилота.
-- Для CI: запускайте `npm run pilot` в `--report-dir artifacts/pilot` и архивируйте каталог целиком (manifest + traces).
-- Golden regression (`src/pilot/pilot-regression.test.ts`) гарантирует, что demo fixture остаётся стабильным — обновляйте фикстуры только если меняете контракт осознанно.
+## Tips
+- Commit pilot reports into the target project repo to track pilot progress over time.
+- In CI, run `npm run pilot -- --report-dir artifacts/pilot` and archive the directory (manifests + traces) as a build artifact.
+- The golden regression test (`src/pilot/pilot-regression.test.ts`) keeps the demo fixture stable—only update fixtures when you intentionally change the contract.
