@@ -27,7 +27,43 @@ describe("runDoctor", () => {
     expect(report.issues.some((issue) => issue.code === "CANONICAL_MANIFEST_MISSING")).toBe(true);
   });
 
+  it("flags missing public manifest", async () => {
+    const dir = tempDir();
+    writeConfig(dir);
+    const outputDir = join(dir, "output");
+    mkdirSync(outputDir, { recursive: true });
+    writeFileSync(join(outputDir, "ai-capabilities.json"), JSON.stringify(sampleManifest()));
+    const report = await runDoctor({ cwd: dir });
+    const issueCodes = report.issues.map((issue) => issue.code);
+    expect(issueCodes).toContain("PUBLIC_MANIFEST_MISSING");
+  });
+
   it("summarizes capabilities and produces JSON", async () => {
+    const dir = tempDir();
+    writeConfig(dir);
+    const outputDir = join(dir, "output");
+    mkdirSync(outputDir, { recursive: true });
+    writeFileSync(join(outputDir, "capabilities.raw.json"), JSON.stringify({}));
+    writeFileSync(join(outputDir, "ai-capabilities.json"), JSON.stringify(sampleManifest()));
+    writeFileSync(join(outputDir, "ai-capabilities.public.json"), JSON.stringify(sampleManifest()));
+    writeFileSync(join(outputDir, "ai-capabilities.enriched.json"), JSON.stringify({}));
+    writeFileSync(join(outputDir, "diagnostics.log"), "ok");
+    mkdirSync(join(outputDir, "traces"), { recursive: true });
+    mkdirSync(join(dir, "src/app-capabilities/capabilities"), { recursive: true });
+    writeFileSync(join(dir, "src/app-capabilities/registry.ts"), "export {};");
+    writeFileSync(join(dir, "src/app-capabilities/capabilities/exampleCapability.ts"), "export {};");
+
+    const report = await runDoctor({ cwd: dir });
+    expect(report.status).toBe("pilot_ready");
+    expect(report.capabilityStats?.total).toBe(2);
+    expect(report.capabilityStats?.executable).toBe(1);
+    expect(report.capabilityStats?.unbound).toBe(1);
+    const json = JSON.parse(formatDoctorReportJson(report));
+    expect(json.status).toBe("pilot_ready");
+    expect(json.outputChecks.canonical.exists).toBe(true);
+  });
+
+  it("reports legacy capability directory usage", async () => {
     const dir = tempDir();
     writeConfig(dir);
     const outputDir = join(dir, "output");
@@ -40,16 +76,10 @@ describe("runDoctor", () => {
     mkdirSync(join(outputDir, "traces"), { recursive: true });
     mkdirSync(join(dir, "src/ai-capabilities/capabilities"), { recursive: true });
     writeFileSync(join(dir, "src/ai-capabilities/registry.ts"), "export {};");
-    writeFileSync(join(dir, "src/ai-capabilities/capabilities/exampleCapability.ts"), "export {};");
 
     const report = await runDoctor({ cwd: dir });
-    expect(report.status).toBe("pilot_ready");
-    expect(report.capabilityStats?.total).toBe(2);
-    expect(report.capabilityStats?.executable).toBe(1);
-    expect(report.capabilityStats?.unbound).toBe(1);
-    const json = JSON.parse(formatDoctorReportJson(report));
-    expect(json.status).toBe("pilot_ready");
-    expect(json.outputChecks.canonical.exists).toBe(true);
+    const issueCodes = report.issues.map((issue) => issue.code);
+    expect(issueCodes).toContain("LEGACY_CAPABILITY_DIR");
   });
 });
 

@@ -1,6 +1,6 @@
 import { success, failure } from "./response-builders.js";
-import type { RouteContext, RouteResult } from "./server-types.js";
-import type { CapabilityExecutionResult } from "../types/index.js";
+import type { RouteContext, RouteResult, ServerState } from "./server-types.js";
+import type { AiCapabilitiesManifest, CapabilityExecutionResult } from "../types/index.js";
 import { HttpError } from "./server-types.js";
 import {
   readJsonBody,
@@ -14,7 +14,10 @@ import { mapExecutionResult } from "./response-utils.js";
 
 export async function handleHealth(ctx: RouteContext): Promise<RouteResult> {
   await ctx.recordEvent("http.health", "Health check requested");
-  const manifest = ctx.state.mode === "public" && ctx.state.publicManifest ? ctx.state.publicManifest : ctx.state.manifest;
+  const manifest =
+    ctx.state.mode === "public" && ctx.state.publicManifest
+      ? ctx.state.publicManifest
+      : ctx.state.manifest;
   const data = {
     status: "ok",
     mode: ctx.state.mode,
@@ -27,7 +30,10 @@ export async function handleHealth(ctx: RouteContext): Promise<RouteResult> {
 
 export async function handleCapabilities(ctx: RouteContext): Promise<RouteResult> {
   await ctx.recordEvent("http.capabilities", "Capabilities requested");
-  const manifest = ctx.state.mode === "public" && ctx.state.publicManifest ? ctx.state.publicManifest : ctx.state.manifest;
+  const manifest =
+    ctx.state.mode === "public"
+      ? requirePublicManifest(ctx.state)
+      : ctx.state.manifest;
   const query = parseCapabilityQuery(ctx.url.searchParams);
   const filtersApplied = Boolean(query.visibility || query.kind || query.capabilityId);
 
@@ -137,7 +143,7 @@ export async function handleTraces(ctx: RouteContext): Promise<RouteResult> {
 
 export async function handleWellKnown(ctx: RouteContext): Promise<RouteResult> {
   await ctx.recordEvent("http.well_known.requested", "Well-known discovery requested");
-  const manifest = ctx.state.publicManifest ?? ctx.state.manifest;
+  const manifest = requirePublicManifest(ctx.state);
   const response = buildWellKnownResponse({
     manifest,
     mode: ctx.state.mode,
@@ -149,4 +155,15 @@ export async function handleWellKnown(ctx: RouteContext): Promise<RouteResult> {
     capabilityCount: response.capabilities.length,
   });
   return { statusCode: 200, body: success(response) };
+}
+
+function requirePublicManifest(state: ServerState): AiCapabilitiesManifest {
+  if (state.publicManifest) {
+    return state.publicManifest;
+  }
+  throw new HttpError(
+    404,
+    "PUBLIC_MANIFEST_MISSING",
+    "Public manifest not configured. Run `npx ai-capabilities extract` or `npx ai-capabilities manifest public` and restart the server.",
+  );
 }

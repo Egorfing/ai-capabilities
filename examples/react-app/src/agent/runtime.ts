@@ -6,7 +6,7 @@ import type {
   AiCapabilitiesManifest,
   CapabilityExecutionResult,
 } from "ai-capabilities";
-import { exampleCapabilities, registerExampleCapabilities } from "../ai-capabilities/index.js";
+import { exampleCapabilities, registerExampleCapabilities } from "../app-capabilities/index.js";
 
 export interface RouterAdapter {
   navigate: (path: string) => void;

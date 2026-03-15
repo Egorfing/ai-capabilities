@@ -8,7 +8,7 @@ This example mimics a minimal product UI that exposes three capabilities to an i
 
 This repo demonstrates:
 
-- **defineCapabilityFromExtracted** — see `src/ai-capabilities/capabilities/createProject.ts` and `listProjects.ts`.
+- **defineCapabilityFromExtracted** — see `src/app-capabilities/capabilities/createProject.ts` and `listProjects.ts`.
 - **UI capabilities** — `openProjectPage.ts` calls router adapters via `ctx.router`.
 - **CapabilityRuntime** — `src/agent/runtime.ts` wires manifest + registry + adapters.
 - **Deterministic agent loop** — `src/agent/localAgent.ts` chooses capabilities without real LLM calls.
@@ -55,7 +55,7 @@ Watch your terminal for `[agent]` / `[runtime]` logs that describe chaining (cre
 
 ## Reusing the pattern in your app
 1. Install dependencies in your app (`npm install ai-capabilities react`).
-2. Copy the `src/ai-capabilities` folder and adjust the handlers to call real APIs.
+2. Copy the `src/app-capabilities` folder and adjust the handlers to call real APIs.
 3. Wire the runtime in `agent/runtime.ts` to pass your router/ui/notify adapters.
 4. Drop `AiChat.tsx` into your UI and replace the placeholder agent logic with a real LLM.
 5. Use `npx ai-capabilities init`, `extract`, `doctor`, and `inspect` as described in [docs/happy-path.md](../../docs/happy-path.md).

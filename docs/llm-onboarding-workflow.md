@@ -34,7 +34,7 @@ Before asking any questions, share a deterministic snapshot that covers:
 - Capabilities with empty schemas or diagnostics.
 - Capabilities marked “unbound” by `doctor`.
 - Whether `output/ai-capabilities*.json` exists and is current.
-- Whether `src/ai-capabilities/**/*` already contains authored files (list key modules such as `capabilities/*.ts`, `registry.ts`, runtime helpers).
+- Whether `src/app-capabilities/**/*` already contains authored files (list key modules such as `capabilities/*.ts`, `registry.ts`, runtime helpers).
 - Whether `detect-llm` found an AI stack and, if so, where it lives (package dependencies, `Chat.tsx`, API routes, runtime helpers).
 
 When documenting the AI stack, automate the discovery:
@@ -61,9 +61,9 @@ If the repo already includes a provider, simply confirm reuse instead of asking 
 
 1. **Auto-bind safe reads/creates**
    ```bash
-   npx ai-capabilities auto-bind --manifest ./output/ai-capabilities.json --dir ./src/ai-capabilities/auto --dry-run
+   npx ai-capabilities auto-bind --manifest ./output/ai-capabilities.json --dir ./src/app-capabilities/auto --dry-run
    ```
-   - Review the plan, then rerun without `--dry-run` to write conservative `defineCapabilityFromExtracted` files under `src/ai-capabilities/auto/`.
+   - Review the plan, then rerun without `--dry-run` to write conservative `defineCapabilityFromExtracted` files under `src/app-capabilities/auto/`.
    - The command intentionally skips destructive capabilities—take note of them for manual scaffolding.
 2. **Scaffold the remaining IDs**
    ```bash
@@ -75,14 +75,14 @@ If the repo already includes a provider, simply confirm reuse instead of asking 
    - Fill `id`, `displayTitle`, `description`, schemas, aliases, example intents, and conservative policies (`visibility: "internal"`, `riskLevel: "low"` for reads, `riskLevel: "medium"` + `confirmationPolicy: "once"` for create/update mutations).
    - Leave clear TODOs whenever execution wiring still needs human approval.
 4. **Register everything**
-   - Update `src/ai-capabilities/registry.ts` (or the project’s registry) to include both auto-bound and scaffolded exports.
+   - Update `src/app-capabilities/registry.ts` (or the project’s registry) to include both auto-bound and scaffolded exports.
    - Ensure runtime helpers import the registry before constructing `CapabilityRuntime`.
 
 **Backend example**
 
 - Extracted id: `hook.create-project-mutation`.
 - Actions:
-  1. Scaffold → `src/ai-capabilities/capabilities/createProjectCapability.ts`.
+  1. Scaffold → `src/app-capabilities/capabilities/createProjectCapability.ts`.
   2. Implement handler calling project API/service.
   3. Update `registry.ts` to include `createProjectCapability`.
 

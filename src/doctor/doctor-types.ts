@@ -40,6 +40,7 @@ export interface DoctorScaffoldInfo {
   registryExists: boolean;
   capabilitiesDirExists: boolean;
   exampleCapabilityExists: boolean;
+  variant: "preferred" | "legacy";
 }
 
 export interface DoctorReport {

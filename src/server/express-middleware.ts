@@ -44,6 +44,7 @@ interface NormalizedMiddlewareOptions {
   routes: RoutePaths;
   jsonBodyLimit: number;
   logger: Logger;
+  allowUnsafePublicFallback: boolean;
 }
 
 export interface AiCapabilitiesMiddlewareOptions {
@@ -55,6 +56,7 @@ export interface AiCapabilitiesMiddlewareOptions {
   basePath?: string;
   jsonBodyLimit?: number;
   logger?: Logger;
+  allowUnsafePublicFallback?: boolean;
 }
 
 type MatchedRoute = "wellKnown" | "execute" | "capabilities";
@@ -101,7 +103,16 @@ async function handleWellKnown(
   options: NormalizedMiddlewareOptions,
   manifest: AiCapabilitiesManifest,
 ): Promise<void> {
-  const manifestForDiscovery = options.publicManifestOverride ?? manifest;
+  const manifestForDiscovery =
+    options.publicManifestOverride ??
+    (options.allowUnsafePublicFallback ? buildPublicManifest(manifest) : undefined);
+  if (!manifestForDiscovery) {
+    throw new HttpError(
+      404,
+      "PUBLIC_MANIFEST_MISSING",
+      "Public manifest not configured. Provide options.publicManifest or enable allowUnsafePublicFallback in non-production environments.",
+    );
+  }
   const payload = buildWellKnownResponse({
     manifest: manifestForDiscovery,
     mode: options.mode,
@@ -118,13 +129,24 @@ async function handleCapabilities(
   options: NormalizedMiddlewareOptions,
   manifest: AiCapabilitiesManifest,
 ): Promise<void> {
-  const effectiveManifest = options.mode === "public"
-    ? options.publicManifestOverride ?? buildPublicManifest(manifest)
-    : manifest;
+  const effectiveManifest =
+    options.mode === "public"
+      ? options.publicManifestOverride ??
+        (options.allowUnsafePublicFallback ? buildPublicManifest(manifest) : undefined)
+      : manifest;
+
+  if (options.mode === "public" && !effectiveManifest) {
+    throw new HttpError(
+      503,
+      "PUBLIC_MANIFEST_MISSING",
+      "Public manifest not configured. Provide options.publicManifest or enable allowUnsafePublicFallback for development.",
+    );
+  }
+  const manifestToUse = effectiveManifest ?? manifest;
 
   const query = parseCapabilityQuery(url.searchParams);
   const filtersApplied = Boolean(query.visibility || query.kind || query.capabilityId);
-  let capabilities = effectiveManifest.capabilities;
+  let capabilities = manifestToUse.capabilities;
 
   if (query.visibility) {
     capabilities = capabilities.filter((cap) => cap.policy.visibility === query.visibility);
@@ -137,15 +159,15 @@ async function handleCapabilities(
   }
 
   if (!filtersApplied) {
-    sendJson(res, 200, success(effectiveManifest));
+    sendJson(res, 200, success(manifestToUse));
     return;
   }
 
   const filtered = {
-    manifestVersion: effectiveManifest.manifestVersion,
-    generatedAt: effectiveManifest.generatedAt,
-    app: effectiveManifest.app,
-    defaults: effectiveManifest.defaults,
+    manifestVersion: manifestToUse.manifestVersion,
+    generatedAt: manifestToUse.generatedAt,
+    app: manifestToUse.app,
+    defaults: manifestToUse.defaults,
     count: capabilities.length,
     capabilities,
   };
@@ -205,6 +227,13 @@ function normalizeOptions(options: AiCapabilitiesMiddlewareOptions): NormalizedM
   if (!options.runtime) {
     throw new Error("createAiCapabilitiesMiddleware requires a runtime");
   }
+  const mode: ExecutionMode = options.mode === "public" ? "public" : "internal";
+  const allowUnsafePublicFallback = Boolean(options.allowUnsafePublicFallback);
+  if (mode === "public" && !options.publicManifest && !allowUnsafePublicFallback) {
+    throw new Error(
+      "createAiCapabilitiesMiddleware in public mode requires options.publicManifest. Generate one or enable allowUnsafePublicFallback for development only.",
+    );
+  }
 
   const manifestProvider = createManifestProvider(options);
   const basePath = normalizeBasePath(options.basePath);
@@ -218,11 +247,12 @@ function normalizeOptions(options: AiCapabilitiesMiddlewareOptions): NormalizedM
     runtime: options.runtime,
     manifestProvider,
     publicManifestOverride: options.publicManifest,
-    mode: options.mode === "public" ? "public" : "internal",
+    mode,
     basePath,
     routes,
     jsonBodyLimit: options.jsonBodyLimit ?? DEFAULT_JSON_LIMIT,
     logger: options.logger ?? console,
+    allowUnsafePublicFallback,
   };
 }
 

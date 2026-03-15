@@ -2,6 +2,44 @@
 
 Runtime отвечает за безопасное исполнение capability и связывает manifest с реальными handlers.
 
+> Нужен обзор, как выбрать между app-local runtime, HTTP runtime и смешанными сценариями? См. [docs/mixed-scenarios.md](./mixed-scenarios.md) — там описаны сценарии A–F, decision matrix и env-паттерны.
+
+> **Безопасный discovery.** HTTP runtime служит canonical manifest только для внутренних агентов. Чтобы включить `/.well-known/ai-capabilities.json`, нужно явно сгенерировать `output/ai-capabilities.public.json` (например, `npx ai-capabilities manifest public`). Если файл отсутствует, well-known выключен (404), а dev fallback (`--unsafe-public-fallback`) доступен только вручную.
+
+### Manifest loader для клиентов/агентов
+
+Когда агенту нужно просто получить актуальный manifest (локально или по HTTP), используйте `loadManifest`:
+
+```ts
+import { loadManifest } from "ai-capabilities";
+
+const manifestResult = await loadManifest({
+  runtimeUrl: process.env.AI_CAP_RUNTIME_URL,
+  expectedVisibility: "internal",
+  cacheTtlMs: 30_000,
+});
+```
+
+- Для `expectedVisibility: "public"` helper автоматически вызывает `/capabilities?visibility=public` и проверяет, что все capability публичные.
+- Для `expectedVisibility: "internal"` helper использует `/capabilities` или локальный canonical файл.
+- `allowFallback` включает автоматический переход с remote на локальный файл при сетевых проблемах.
+- `ManifestLoadResult` содержит `sourceKind`, `sourceDetail`, `usedFallback`, `usedCache`, `warnings`, чтобы можно было логировать или показывать пользователю.
+
+### Authored overrides vs. manifest
+
+Когда capability определён через `defineCapability`, его описание (schema/policy/metadata) может отличаться от того, что записано в canonical manifest. `CapabilityRuntime` применяет простые, предсказуемые правила:
+
+| Field          | Source of truth at runtime                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------ |
+| `execute`      | Всегда из authored capability (handler в registry).                                        |
+| `inputSchema`  | Если authored определение задаёт schema — полная замена manifest, иначе используется manifest. |
+| `outputSchema` | Аналогично `inputSchema`: authored → replace, иначе manifest.                              |
+| `policy`       | Shallow merge: manifest policy → поверх накладываются authored поля (visibility/risk/confirmation). |
+| `metadata`     | Shallow merge: manifest metadata → поверх authored ключи (nested объекты не мерджатся рекурсивно). |
+| Остальные поля | Берутся из manifest, чтобы discovery/public snapshots оставались каноничными.              |
+
+Runtime логирует `console.warn` о том, какие поля были переопределены (warning можно перехватить собственным логгером, если нужно). Если authored capability не задаёт конкретное поле, runtime по-прежнему опирается на manifest. Это значит, что regeneration `output/ai-capabilities.json` всё ещё нужен для discovery, но во время исполнения source of truth — authored DSL.
+
 ## Основные компоненты
 - **`CapabilityRegistry`** (`src/runtime/capability-registry.ts`) — map `capabilityId → handler`. Handler — async функция, принимающая validated input.
 - **`CapabilityRuntime`** (`src/runtime/capability-runtime.ts`) — orchestration: валидация input schema, policy check, вызов handler, формирование `CapabilityExecutionResult`.

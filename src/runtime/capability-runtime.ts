@@ -55,7 +55,8 @@ export class CapabilityRuntime {
     });
 
     for (const capability of options.manifest.capabilities) {
-      this.capabilityMap.set(capability.id, capability);
+      const merged = this.applyAuthoredOverrides(capability);
+      this.capabilityMap.set(capability.id, merged);
     }
   }
 
@@ -193,6 +194,51 @@ export class CapabilityRuntime {
 
   getManifest(): AiCapabilitiesManifest {
     return this.manifest;
+  }
+
+  private applyAuthoredOverrides(capability: AiCapability): AiCapability {
+    const overrides = this.registry.getOverrides(capability.id);
+    if (!overrides) {
+      return capability;
+    }
+
+    const mergedPolicy = overrides.policy
+      ? {
+          ...(capability.policy ?? {}),
+          ...overrides.policy,
+        }
+      : capability.policy;
+
+    const mergedMetadata = overrides.metadata
+      ? {
+          ...(capability.metadata ?? {}),
+          ...overrides.metadata,
+        }
+      : capability.metadata;
+
+    const merged: AiCapability = {
+      ...capability,
+      inputSchema: overrides.inputSchema ?? capability.inputSchema,
+      outputSchema: overrides.outputSchema ?? capability.outputSchema,
+      policy: mergedPolicy,
+      metadata: mergedMetadata,
+    };
+
+    this.logOverrides(capability.id, overrides);
+    return merged;
+  }
+
+  private logOverrides(capabilityId: string, overrides: ReturnType<CapabilityRegistry["getOverrides"]>): void {
+    if (!overrides) return;
+    const overriddenFields: string[] = [];
+    if (overrides.policy) overriddenFields.push("policy");
+    if (overrides.inputSchema) overriddenFields.push("inputSchema");
+    if (overrides.outputSchema) overriddenFields.push("outputSchema");
+    if (overrides.metadata) overriddenFields.push("metadata");
+    if (overriddenFields.length === 0) return;
+    console.warn(
+      `[CapabilityRuntime] applying authored overrides for "${capabilityId}": ${overriddenFields.join(", ")}`,
+    );
   }
 
   private getValidator(capability: AiCapability): ValidateFunction {

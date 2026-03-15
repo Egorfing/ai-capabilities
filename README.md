@@ -15,7 +15,7 @@ AI Capabilities solves this by:
 - Unifying backend APIs, UI/navigation flows, and policy controls in one place.
 
 **What you get immediately**
-- Automatic capability extraction from source code (OpenAPI, React Query, Router, Form).
+- Automatic capability extraction from source code (OpenAPI / Swagger specs, React Query hooks, Router, Form).
 - Canonical capability manifests with schemas, metadata, and policy.
 - A capability runtime + policy layer that executes actions safely.
 - AI tool adapters (OpenAI, Anthropic, internal agents).
@@ -53,7 +53,7 @@ output/ capability manifest
         ↓
 ai-capabilities scaffold
         ↓
-src/ai-capabilities executable actions
+src/app-capabilities executable actions
         ↓
 CapabilityRuntime
         ↓
@@ -61,31 +61,24 @@ AI agent / chat / server tools
 ```
 
 - `output/` stores the generated manifest family (`ai-capabilities*.json`) and diagnostics.
-- `src/ai-capabilities/` is where you keep the developer-authored actions that scaffolds create.
+- `src/app-capabilities/` is where you keep the developer-authored actions that scaffolds create.
 - `CapabilityRuntime` exposes only the capabilities you register, so agents/chats/server tools stay within the safe surface.
 - Agents never call your application APIs directly—they call capabilities exposed by the runtime.
 
-## Quickstart (10 minutes)
+> Legacy note: versions prior to 0.3 scaffolded `src/ai-capabilities`. The CLI still recognizes that directory for backward compatibility, but it now warns and recommends renaming to `src/app-capabilities` to avoid collisions with the `ai-capabilities` npm package name.
 
-> Copy/paste commands. Every step works with humans _and_ coding assistants.
+## Quickstart: first working capability (guided)
 
-```bash
-npm install ai-capabilities
-npx ai-capabilities init
-npx ai-capabilities inspect
-npx ai-capabilities extract
-npx ai-capabilities doctor
-npx ai-capabilities serve
-```
+> CLI-команды запускаются быстро, но рабочая capability появляется только после ручной доработки. Следуйте фазам ниже или откройте подробный гайд — [docs/quickstart.md](docs/quickstart.md).
 
-After these steps your application exposes a capability runtime and a discovery endpoint. You will have:
+1. **Bootstrap:** `npm install ai-capabilities && npx ai-capabilities init` создают config и scaffold директорию.
+2. **Discover:** `npx ai-capabilities inspect/extract/doctor` фиксируют найденные capability и генерируют manifest (`output/ai-capabilities*.json`).
+3. **Select & Scaffold:** выберите конкретный id и выполните `npx ai-capabilities scaffold --id <capability-id>`.
+4. **Author:** откройте файл в `src/app-capabilities/capabilities/**` и реализуйте `execute`, уточните `inputSchema`/`outputSchema`, policy и metadata.
+5. **Register & Wire:** импортируйте capability в `src/app-capabilities/registry.ts`, добавьте её в `registerCapabilityDefinitions`, убедитесь, что runtime создан (локально или через `npx ai-capabilities serve`).
+6. **Smoke-test:** выполните HTTP запрос `POST /execute` или вызовите runtime напрямую, чтобы убедиться, что capability действительно исполняется. Только после успешного теста считаете capability готовой.
 
-- `output/capabilities.raw.json` and `output/ai-capabilities.json`.
-- `output/ai-capabilities.public.json` for external agents.
-- `output/ai-capabilities.enriched.json` (after `enrich`).
-- A running capability runtime on `localhost:4000` with `/\.well-known/ai-capabilities.json`.
-- Confirmation that UI/Router adapters are wired (see [Frontend/UI capabilities](#runtime--frontend-actions)).
-- Full walkthrough: [docs/quickstart.md](docs/quickstart.md).
+Результат этих шагов — не просто manifest, а минимум одна подтверждённо executable capability, которую можно отдавать агентам. Остальные возможности (public manifest, enrich, HTTP runtime) остаются такими же, но теперь явно отделены от ручной части работы.
 
 ### Zero-config quick scan
 
@@ -97,19 +90,102 @@ npx ai-capabilities
 
 The command prints capability counts, safe auto-bind candidates, high-risk operations, and recommended next steps so you know exactly what to do next.
 
+**Need to decide between an app-local runtime, HTTP runtime, or mixed visibility?** See [docs/mixed-scenarios.md](docs/mixed-scenarios.md) for a decision matrix that covers internal agents, public discovery, browser/Node consumers, env patterns, and fallback strategies.
+
+### Public manifest snapshot
+
+The HTTP runtime and discovery endpoint now require an explicit public manifest file (`output/ai-capabilities.public.json`). Generate it whenever you update the canonical manifest:
+
+```bash
+npx ai-capabilities manifest public \
+  --input ./output/ai-capabilities.json \
+  --output ./output/ai-capabilities.public.json
+```
+
+`/.well-known/ai-capabilities.json` stays disabled unless this file exists (or you run the dev-only `--unsafe-public-fallback` flag). This makes accidental exposure of internal capabilities far less likely.
+
+### Loading manifests programmatically
+
+Need to hydrate an agent or worker without re-implementing HTTP/local fallbacks? Use the new manifest loader utility:
+
+```ts
+import { loadManifest } from "ai-capabilities";
+
+const result = await loadManifest({
+  runtimeUrl: process.env.AI_CAP_RUNTIME_URL,
+  localPath: "./output/ai-capabilities.public.json",
+  expectedVisibility: "public",
+  allowFallback: true,
+  cacheTtlMs: 60_000,
+});
+
+console.log(`Loaded ${result.manifest.capabilities.length} capabilities from ${result.sourceKind}`);
+```
+
+`loadManifest` automatically picks the right source (remote HTTP vs. local file), enforces public/internal boundaries, and reports whether fallback or cache were used. See [docs/mixed-scenarios.md](docs/mixed-scenarios.md#manifest-loader-helper) for details.
+
+### Capability lifecycle status
+
+Use the status command to understand where each capability sits on the path from “discovered” to “executable”:
+
+```bash
+npx ai-capabilities status
+```
+
+Output example:
+
+```
+Capability lifecycle summary
+----------------------------
+Discovered : 17
+Scaffolded : 12
+Authored   : 4
+Registered : 3
+Runtime    : detected
+Executable : 2
+
+Capability status (yes / no / unknown)
+ID                            Disc  Scaf  Auth  Reg   Wired Exec  Notes
+api.orders.list-orders        yes   yes   yes   yes   yes  yes    -
+api.orders.create-order       yes   yes   no    no    yes  no     Handler TODO placeholder detected; Not found in registry.ts
+api.orders.cancel-order       yes   no    unknown no   yes  no     Build scaffold and register capability
+```
+
+- `yes`/`no` statuses are only reported when the tool can prove the state. Otherwise you see `unknown`.
+- `wired` and `executable` rely on heuristics (runtime instantiation detection + registry authoring); treat them as guidance rather than proof.
+- `notes` list the next obvious step (scaffold missing, registry entry missing, etc.).
+
+### Forgot to run `init`?
+
+When you run `npx ai-capabilities` (or any command that needs the config) before bootstrapping the project, the CLI now performs a preflight check instead of crashing:
+
+```
+This project does not appear to be initialized for ai-capabilities yet.
+Required setup files were not found:
+  • ai-capabilities.config.ts|json keeps project paths/output directories for every command.
+  • src/app-capabilities/registry.ts — Capability registry scaffold (created by ai-capabilities init).
+
+Run `ai-capabilities init` now? [Y/n]
+```
+
+- **Interactive shells**: you'll be prompted once to run `ai-capabilities init` automatically; accept to scaffold the config + `src/app-capabilities` without retyping the command.
+- **CI / non-interactive shells**: the command exits with a clear error that lists what's missing and reminds you to run `npx ai-capabilities init` manually before rerunning (no hidden prompts).
+
+Already-initialized projects skip the check instantly, so existing workflows keep working.
+
 ### Example CLI output
 
 ```
 $ npx ai-capabilities init
 [init] Project: my-app
 [init] created ai-capabilities.config.json
-[init] created src/ai-capabilities/index.ts
-[init] created src/ai-capabilities/registry.ts
-[init] created src/ai-capabilities/capabilities/exampleCapability.ts
+[init] created src/app-capabilities/index.ts
+[init] created src/app-capabilities/registry.ts
+[init] created src/app-capabilities/capabilities/exampleCapability.ts
 
 Next steps:
   1. Review ai-capabilities.config.json and adjust include/exclude paths for your repo.
-  2. Replace src/ai-capabilities/capabilities/exampleCapability.ts with a real action.
+  2. Replace src/app-capabilities/capabilities/exampleCapability.ts with a real action.
   3. Run npx ai-capabilities inspect to see what the extractor picks up.
   4. Run npx ai-capabilities extract to build the manifest.
   5. Run npx ai-capabilities serve to expose the capability runtime.
@@ -228,7 +304,7 @@ export const createProjectCapability = defineCapabilityFromExtracted({
 
 - Use `defineCapabilityFromExtracted` when promoting a hook/endpoint discovered by `inspect`/`extract`—it preserves `sourceId` so you can trace the lineage.
 - Use `defineCapability` when authoring UI/navigation actions or bespoke server operations from scratch.
-- Keep all executable code under `src/ai-capabilities/**` (or `src/ai-capabilities/auto/**` when using `auto-bind`) and register everything via `registerCapabilityDefinitions`.
+- Keep all executable code under `src/app-capabilities/**` (or `src/app-capabilities/auto/**` when using `auto-bind`) and register everything via `registerCapabilityDefinitions`.
 
 See [docs/define-capability.md](docs/define-capability.md) and [docs/standardization.md](docs/standardization.md) for the authoring philosophy.
 
@@ -262,9 +338,9 @@ npx ai-capabilities scaffold --list
 
 Running `npx ai-capabilities scaffold` without `--id` now opens a numbered picker in interactive terminals so you can select an entry instead of copying the ID by hand. Non-interactive shells (CI, scripts) continue to print the list and exit so they stay deterministic.
 
-Prefer `auto-bind` when you want to generate conservative `defineCapabilityFromExtracted` files for safe read/create operations in bulk. Use `--dry-run` to preview the plan, then review `src/ai-capabilities/auto/*.ts` before registering them.
+Prefer `auto-bind` when you want to generate conservative `defineCapabilityFromExtracted` files for safe read/create operations in bulk. Use `--dry-run` to preview the plan, then review `src/app-capabilities/auto/*.ts` before registering them.
 
-Then register the generated capability in `src/ai-capabilities/registry.ts` and wire it into your runtime/chat surface.
+Then register the generated capability in `src/app-capabilities/registry.ts` and wire it into your runtime/chat surface.
 
 Need to validate the full pilot experience? Follow [docs/pilot.md](docs/pilot.md) for extraction + enrichment drills.
 
@@ -341,7 +417,7 @@ export const projectsCreateCapability = defineCapabilityFromExtracted({
    npx ai-capabilities scaffold --id hook.create-project-mutation
    ```
    Use `--manifest` to point at a custom canonical manifest and `--dir` to change the output directory if needed.
-3. The CLI creates `src/ai-capabilities/capabilities/createProjectCapability.ts`:
+3. The CLI creates `src/app-capabilities/capabilities/createProjectCapability.ts`:
    ```ts
    import { defineCapabilityFromExtracted } from "ai-capabilities";
 

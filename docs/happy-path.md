@@ -12,10 +12,10 @@ Optionally add React/TypeScript if you are building a frontend scaffold.
 ```bash
 npx ai-capabilities init
 ```
-This creates `ai-capabilities.config.json` and the `src/ai-capabilities/` scaffold.
+This creates `ai-capabilities.config.json` and the `src/app-capabilities/` scaffold.
 
 ## 3. Define capabilities (authoring standard)
-Add files under `src/ai-capabilities/capabilities/` using the helper DSL:
+Add files under `src/app-capabilities/capabilities/` using the helper DSL:
 - `defineCapabilityFromExtracted` when you promote an extracted hook; it preserves `sourceId` and keeps the manifest traceable.
 - `defineCapability` when you author frontend/navigation or bespoke server actions from scratch.
 
@@ -24,7 +24,7 @@ This is the canonical authoring model: manifests describe discovery, helper file
 - A safe read capability (`projects.list`)
 - A UI/navigation action (`navigation.open-project-page`)
 
-Refer to `examples/react-app/src/ai-capabilities/capabilities/*.ts` for copy-paste starting points.
+Refer to `examples/react-app/src/app-capabilities/capabilities/*.ts` for copy-paste starting points.
 
 As soon as each file exists, assign conservative policy metadata (visibility/risk/confirmation). The [security model](./security-model.md) recommends `visibility: "internal"`, `riskLevel: "low"`, `confirmationPolicy: "none"` for reads and `riskLevel: "medium"`, `confirmationPolicy: "once"` for writes during pilots.
 
@@ -40,7 +40,7 @@ Instead of creating files manually, run:
 ```bash
 npx ai-capabilities scaffold --id hook.create-project-mutation \
   --manifest ./output/ai-capabilities.json \
-  --dir ./src/ai-capabilities/capabilities
+  --dir ./src/app-capabilities/capabilities
 ```
 The command copies metadata from the canonical manifest, creates `createProjectCapability.ts`, and wires `defineCapabilityFromExtracted` with `sourceId` already set. Edit the generated file to pick the final `id` and implement `execute`.
 
@@ -49,16 +49,16 @@ To bootstrap the obvious read/create capabilities in bulk:
 ```bash
 npx ai-capabilities auto-bind \
   --manifest ./output/ai-capabilities.json \
-  --dir ./src/ai-capabilities/auto
+  --dir ./src/app-capabilities/auto
 ```
-Run with `--dry-run` first to preview what would happen. The CLI writes conservative `defineCapabilityFromExtracted` files into `src/ai-capabilities/auto/` (safe read/list queries plus create/update mutations). Review them, move anything that needs customization into `capabilities/`, then register the exports in your registry.
+Run with `--dry-run` first to preview what would happen. The CLI writes conservative `defineCapabilityFromExtracted` files into `src/app-capabilities/auto/` (safe read/list queries plus create/update mutations). Review them, move anything that needs customization into `capabilities/`, then register the exports in your registry.
 
 Use this split to stay safe:
 - **auto-bind** → obvious, low-risk reads/creates you want quickly (agent-native fast path).
 - **scaffold/hand-authored** → higher-risk mutations, destructive flows, UI/navigation behavior that needs human judgment.
 
 ## 4. Register capabilities and wire the runtime
-Inside `src/ai-capabilities/registry.ts`:
+Inside `src/app-capabilities/registry.ts`:
 ```ts
 import { registerCapabilityDefinitions } from "ai-capabilities";
 import { createProjectCapability } from "./capabilities/createProject";
@@ -111,7 +111,7 @@ npx ai-capabilities inspect --json | jq
 - `doctor` diagnoses readiness and lists next steps.
 - `inspect` inventories capabilities by kind/visibility/executability.
 
-Running `extract` will create or refresh the `output/` directory. Everything inside (`ai-capabilities*.json`, diagnostics, traces) is generated from your source code—treat it like build output. `output/` is fully regenerable: delete it and run `npx ai-capabilities extract` whenever you need a fresh manifest. Keep authoring executable capabilities in `src/ai-capabilities`, using the manifest data as input for `defineCapabilityFromExtracted`. Before asking more questions, run `npx ai-capabilities detect-llm --project .` (or `--json`) to see whether an AI/LLM stack already exists. Coding assistants should follow [docs/llm-onboarding-workflow.md](./llm-onboarding-workflow.md) if they need a guided inspect → question → generate loop.
+Running `extract` will create or refresh the `output/` directory. Everything inside (`ai-capabilities*.json`, diagnostics, traces) is generated from your source code—treat it like build output. `output/` is fully regenerable: delete it and run `npx ai-capabilities extract` whenever you need a fresh manifest. Keep authoring executable capabilities in `src/app-capabilities`, using the manifest data as input for `defineCapabilityFromExtracted`. Before asking more questions, run `npx ai-capabilities detect-llm --project .` (or `--json`) to see whether an AI/LLM stack already exists. Coding assistants should follow [docs/llm-onboarding-workflow.md](./llm-onboarding-workflow.md) if they need a guided inspect → question → generate loop.
 
 Address any issues before continuing (missing enriched manifest, unbound capabilities, etc.).
 

@@ -47,9 +47,9 @@ If a helper shouldn’t be public, keep it undocumented and avoid exporting it f
 - Keep onboarding references in sync: `docs/llm-onboarding-workflow.md`, `docs/agents-workflow.md`, and `docs/llm-prompt.md` should always reflect the latest recommended flow and helper commands.
 
 ## Adding example capabilities or runtime wiring
-1. Follow the pattern in `examples/react-app/src/ai-capabilities/capabilities/`.
+1. Follow the pattern in `examples/react-app/src/app-capabilities/capabilities/`.
 2. Use `defineCapability` for net-new actions, or `defineCapabilityFromExtracted` when promoting a capability discovered via `inspect`/`extract` so `metadata.extractedSourceId` stays linked.
-3. Update `examples/react-app/src/ai-capabilities/registry.ts` to register the new capability.
+3. Update `examples/react-app/src/app-capabilities/registry.ts` to register the new capability.
 4. If the runtime needs new adapters (router/ui/notify), extend `examples/react-app/src/agent/runtime.ts`.
 5. Document the new capability in the example README and, if it demonstrates a concept (e.g., chaining), add a dedicated doc such as `docs/capability-chaining.md`.
 

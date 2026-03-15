@@ -1,4 +1,5 @@
 export { CapabilityRegistry } from "./capability-registry.js";
+export type { CapabilityOverrides, CapabilityRegistryRegisterOptions } from "./capability-registry.js";
 export { CapabilityRuntime } from "./capability-runtime.js";
 export type { CapabilityRuntimeOptions } from "./capability-runtime.js";
 export type {

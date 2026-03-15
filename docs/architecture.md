@@ -21,12 +21,12 @@ AI Capabilities adds an “agent surface” to any application without rewiring 
 
 | Layer | Responsibility | Source folders |
 | --- | --- | --- |
-| **Extraction** | Parse OpenAPI specs, React Query hooks, router definitions, or manual inputs into `RawCapability` objects. Includes diagnostics for each source. | `src/extractors`, `src/inspect` |
+| **Extraction** | Parse OpenAPI 3.x / Swagger 2.0 specs, React Query hooks, router definitions, or manual inputs into `RawCapability` objects (with diagnostics per source). | `src/extractors`, `src/inspect` |
 | **Manifest builder** | Normalize schemas, merge duplicates, and emit canonical + public manifests. | `src/manifest`, `src/output` |
 | **Enrichment** | Optional semantic metadata (display titles, aliases, intents). | `src/enrich` |
 | **Registry & runtime** | Register executable handlers, evaluate policy (`visibility`, `riskLevel`, `confirmationPolicy`), and execute requests. | `src/runtime`, `src/binding`, `src/policy` |
 | **Server & well-known** | HTTP transport (`/execute`, `/capabilities`, `/.well-known/ai-capabilities.json`), traces, and public discovery surface. | `src/server` |
-| **Frontend actions** | Explicit navigation/UI capabilities that run inside the product shell while still using the same manifest + policy system. | `docs/frontend-actions.md`, `examples/react-app/src/ai-capabilities` |
+| **Frontend actions** | Explicit navigation/UI capabilities that run inside the product shell while still using the same manifest + policy system. | `docs/frontend-actions.md`, `examples/react-app/src/app-capabilities` |
 
 ## Data flow
 1. `npx ai-capabilities extract` → `output/capabilities.raw.json` + diagnostics.

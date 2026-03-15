@@ -20,6 +20,7 @@ Options:
   --manifest <path>    Path to canonical manifest (default: config.output.canonical)
   --config <path>      Path to ai-capabilities.config.json|ts (default: auto)
   --public             Run server in public mode (default: internal)
+  --unsafe-public-fallback  DEV ONLY: synthesize public manifest from canonical when missing
   --help               Show this help
 `.trim();
 
@@ -36,9 +37,21 @@ export async function runServe(args: ParsedArgs): Promise<void> {
   const configPath = typeof args.flags.config === "string" ? args.flags.config : undefined;
 
   const config = await loadConfigSafe(configPath);
+  let unsafePublicFallback = Boolean(args.flags["unsafe-public-fallback"]);
   const manifestPath = resolveManifestPath(args.flags.manifest, config);
   const canonicalManifest = readManifest(manifestPath);
-  const publicManifest = resolvePublicManifest(config, canonicalManifest, publicMode);
+  const publicManifestInfo = loadPublicManifest(config);
+  let publicManifest = publicManifestInfo.manifest;
+  if (publicMode && !publicManifest) {
+    console.error(
+      `[serve] public mode requires a public manifest at ${publicManifestInfo.path}. Run \`npx ai-capabilities extract\` or \`npx ai-capabilities manifest public\`.`,
+    );
+    process.exit(1);
+  }
+  if (publicMode && unsafePublicFallback) {
+    console.warn("[serve] ignoring --unsafe-public-fallback in public mode.");
+    unsafePublicFallback = false;
+  }
   const tracesDir = config?.output.tracesDir ?? resolve("output/traces");
 
   const { registry } = createBoundRegistry({ manifest: canonicalManifest });
@@ -47,6 +60,17 @@ export async function runServe(args: ParsedArgs): Promise<void> {
   console.log(`[serve] manifest: ${manifestPath}`);
   console.log(`[serve] mode: ${mode}`);
   console.log(`[serve] traces: ${tracesDir}`);
+  if (publicManifest) {
+    console.log(`[serve] public manifest: ${publicManifestInfo.path}`);
+  } else if (unsafePublicFallback) {
+    console.warn(
+      "[serve] UNSAFE public fallback enabled — filtering canonical manifest at runtime (dev only).",
+    );
+  } else {
+    console.log(
+      `[serve] public manifest: not configured (well-known disabled, expected at ${publicManifestInfo.path})`,
+    );
+  }
 
   const { server, info } = await startServer(
     {
@@ -55,6 +79,7 @@ export async function runServe(args: ParsedArgs): Promise<void> {
       runtime,
       tracesDir,
       logger: console,
+      allowUnsafePublicFallback: unsafePublicFallback,
     },
     {
       host,
@@ -130,27 +155,22 @@ function readManifest(filePath: string): AiCapabilitiesManifest {
   }
 }
 
-function resolvePublicManifest(
+function loadPublicManifest(
   config: ResolvedConfig | undefined,
-  canonical: AiCapabilitiesManifest,
-  publicMode: boolean,
-): AiCapabilitiesManifest {
-  const publicPath = config?.output.public;
-  if (publicPath && existsSync(publicPath)) {
-    try {
-      const raw = readFileSync(publicPath, "utf-8");
-      return JSON.parse(raw) as AiCapabilitiesManifest;
-    } catch (err) {
-      if (publicMode) {
-        console.warn(`[serve] failed to read public manifest: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    }
+): { manifest?: AiCapabilitiesManifest; path: string } {
+  const publicPath = resolve(
+    config?.output.public ?? "output/ai-capabilities.public.json",
+  );
+  if (!existsSync(publicPath)) {
+    return { path: publicPath };
   }
-  if (publicMode) {
-    console.warn("[serve] using filtered canonical manifest for public mode");
+  try {
+    const raw = readFileSync(publicPath, "utf-8");
+    return { manifest: JSON.parse(raw) as AiCapabilitiesManifest, path: publicPath };
+  } catch (err) {
+    console.warn(
+      `[serve] failed to read public manifest (${publicPath}): ${err instanceof Error ? err.message : String(err)}`,
+    );
+    return { path: publicPath };
   }
-  return {
-    ...canonical,
-    capabilities: canonical.capabilities.filter((cap) => cap.policy.visibility === "public"),
-  };
 }

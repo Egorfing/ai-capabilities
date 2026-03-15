@@ -18,9 +18,9 @@ References: [docs/external-agents.md](./external-agents.md), [docs/security-mode
 ## 2. Authoring standard — `defineCapability*`
 
 - Treat `defineCapability` and `defineCapabilityFromExtracted` as the DSL for executable capabilities.
-- `defineCapabilityFromExtracted` promotes discovered hooks (React Query, OpenAPI, etc.) into real handlers while keeping `sourceId` traceability.
+- `defineCapabilityFromExtracted` promotes discovered hooks (React Query, OpenAPI / Swagger specs, etc.) into real handlers while keeping `sourceId` traceability.
 - `defineCapability` covers bespoke UI/navigation actions or server routines written from scratch.
-- Every capability file should live under `src/ai-capabilities/**`, include schemas, policy, aliases/example intents, and register via `registerCapabilityDefinitions`.
+- Every capability file should live under `src/app-capabilities/**`, include schemas, policy, aliases/example intents, and register via `registerCapabilityDefinitions`.
 - This approach keeps authored capabilities reviewable, versionable, and easy for agents to understand.
 
 References: [docs/define-capability.md](./define-capability.md), [docs/happy-path.md](./happy-path.md#authoring-capabilities), [README.md#Authoring-standard](../README.md#authoring-standard).
@@ -28,7 +28,7 @@ References: [docs/define-capability.md](./define-capability.md), [docs/happy-pat
 ## 3. Agent-native adoption — auto-bind + AGENTS.md
 
 - Coding assistants (Codex, Cursor, Claude Code, etc.) follow [AGENTS.md](../AGENTS.md) to diagnose a repo (`doctor`, `inspect`, `extract`, `detect-llm`), summarize findings, ask only missing questions, and generate capabilities.
-- `npx ai-capabilities auto-bind` accelerates safe-read/create onboarding by generating conservative files under `src/ai-capabilities/auto/`; assistants then review and register them.
+- `npx ai-capabilities auto-bind` accelerates safe-read/create onboarding by generating conservative files under `src/app-capabilities/auto/`; assistants then review and register them.
 - `npx ai-capabilities scaffold --id ...` plus `defineCapabilityFromExtracted` handles the rest (mutations, UI flows, destructive operations) with explicit human review.
 - Documentation such as [docs/llm-onboarding-workflow.md](./llm-onboarding-workflow.md) and [docs/agents-workflow.md](./agents-workflow.md) encode the expectation that assistants reuse existing chat/LLM stacks instead of reinventing them.
 

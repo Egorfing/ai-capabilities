@@ -5,6 +5,7 @@ import type { ExtractionContext } from "./types.js";
 import { createTestConfig } from "../test-helpers/config.js";
 
 const fixtureDir = resolve(import.meta.dirname, "../../fixtures/demo-app");
+const swaggerFixtureDir = resolve(import.meta.dirname, "../../fixtures/swagger");
 
 const ctx: ExtractionContext = {
   projectPath: fixtureDir,
@@ -116,5 +117,24 @@ describe("openApiExtractor", () => {
       config,
     });
     expect(result.capabilities.length).toBe(7);
+  });
+
+  it("extracts capabilities from Swagger 2.0 specs", async () => {
+    const config = createTestConfig(swaggerFixtureDir);
+    const specPath = resolve(swaggerFixtureDir, "orders.swagger.json");
+    config.extractors.openapi.spec = [specPath];
+    const result = await openApiExtractor.extract({
+      projectPath: swaggerFixtureDir,
+      config,
+    });
+
+    expect(result.capabilities.length).toBe(3);
+    const listCap = result.capabilities.find((c) => c.id === "api.orders.list-orders")!;
+    const createCap = result.capabilities.find((c) => c.id === "api.orders.create-order")!;
+
+    expect(listCap.inputSchema.properties).toHaveProperty("status");
+    expect(createCap.inputSchema.properties).toHaveProperty("items");
+    expect(createCap.outputSchema).toBeDefined();
+    expect(result.diagnostics.some((d) => d.filePath?.includes("orders.swagger.json"))).toBe(true);
   });
 });

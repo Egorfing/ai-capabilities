@@ -6,6 +6,8 @@
 - `internal` (по умолчанию) — доступ ко всем capabilities из canonical manifest.
 - `public` (`npm run serve -- --public`) — использует public manifest и автоматически выставляет runtime mode `public`.
 
+> ⚠️ Public discovery выключен по умолчанию. Пока рядом с сервером нет `output/ai-capabilities.public.json`, `/.well-known/ai-capabilities.json` вернёт 404. Сгенерируйте файл через `npx ai-capabilities extract` или `npx ai-capabilities manifest public`. Dev override `--unsafe-public-fallback` можно включить явно, но он логирует предупреждение и не предназначен для production.
+
 ## Endpoints
 ### GET /health
 ```json
@@ -57,7 +59,8 @@
 - Возвращает `{ items: [...], total }`.
 
 ### GET /.well-known/ai-capabilities.json
-- Публикует public manifest + discovery info.
+- Публикует public manifest + discovery info **только когда public manifest был передан серверу**.
+- При отсутствии файла возвращает `404 PUBLIC_MANIFEST_MISSING`.
 - Ответ содержит `discovery.executionEndpoint`, `interaction` и `capabilities` (без handlerRef/metadata).
 
 ## Трассировка
@@ -77,9 +80,21 @@
 ```bash
 npm run serve -- --config fixtures/config/basic/ai-capabilities.config.json --host 127.0.0.1 --port 4000
 npm run serve -- --config ... --public # public mode
+npm run serve -- --unsafe-public-fallback # dev only, синтезирует public manifest на лету
 ```
 
 Сервер не включает auth/rate limiting и предназначен для локальных/внутренних сетей.
+
+### Публикация public manifest
+Public manifest генерируется автоматически во время `npx ai-capabilities extract`, но его можно собирать отдельно:
+
+```bash
+npx ai-capabilities manifest public \
+  --input ./output/ai-capabilities.json \
+  --output ./output/ai-capabilities.public.json
+```
+
+Добавьте этот шаг в CI перед запуском HTTP runtime, чтобы discovery никогда не использовал устаревший snapshot.
 
 ## Express / Node middleware
 Если у вас уже есть Express-приложение и не хочется поднимать отдельный HTTP server, используйте `createAiCapabilitiesMiddleware` из `ai-capabilities/server`:
@@ -117,9 +132,10 @@ app.listen(3000);
 | `runtime` | ✅ | Готовый `CapabilityRuntime`. |
 | `manifest` | ✅\* | Canonical manifest. Если не передать, будет вызван `runtime.getManifest()`. |
 | `manifestProvider` | ❌ | Альтернатива `manifest` — функция, возвращающая manifest на каждый запрос. |
-| `publicManifest` | ❌ | Предподготовленный public manifest (иначе формируется на лету). |
+| `publicManifest` | ✅\*\* | Предподготовленный public manifest (обязателен для public mode и discovery; fallback разрешён только при `allowUnsafePublicFallback`). |
 | `mode` | ❌ | `"internal"` (по умолчанию) или `"public"`. |
 | `basePath` | ❌ | Префикс маршрутов (`/ai`, `/internal/tools`, и т.п.). |
 | `jsonBodyLimit` | ❌ | Лимит на размер JSON (по умолчанию 1 МБ). |
+| `allowUnsafePublicFallback` | ❌ | Dev-флаг: если `true`, middleware будет фильтровать canonical manifest на лету, даже если `publicManifest` не передан. Не используйте в production. |
 
 Пример (`examples/express-app`) регистрирует безопасный read-capability `api.orders.list-orders`, монтирует middleware в public режиме и демонстрирует полную цепочку discovery → execution с помощью клиентского SDK.

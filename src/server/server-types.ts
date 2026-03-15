@@ -9,6 +9,7 @@ export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue
 export interface Logger {
   log(message?: unknown, ...optional: unknown[]): void;
   error(message?: unknown, ...optional: unknown[]): void;
+  warn?(message?: unknown, ...optional: unknown[]): void;
 }
 
 export interface ServerDependencies {
@@ -17,6 +18,7 @@ export interface ServerDependencies {
   runtime: CapabilityRuntimeInterface;
   tracesDir?: string;
   logger?: Logger;
+  allowUnsafePublicFallback?: boolean;
 }
 
 export interface ServerOptions {
@@ -44,6 +46,7 @@ export interface ServerState {
   mode: ExecutionMode;
   tracesDir?: string;
   logger: Logger;
+  allowUnsafePublicFallback: boolean;
 }
 
 export interface RouteContext {

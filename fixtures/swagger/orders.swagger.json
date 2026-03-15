@@ -1,0 +1,116 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Orders API",
+    "version": "1.0.0",
+    "description": "Swagger fixture used by extractor tests"
+  },
+  "basePath": "/api",
+  "schemes": ["https"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "paths": {
+    "/orders": {
+      "get": {
+        "tags": ["orders"],
+        "operationId": "listOrders",
+        "summary": "List orders",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "type": "string",
+            "description": "Status filter",
+            "required": false
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of orders",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Order" }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["orders"],
+        "operationId": "createOrder",
+        "summary": "Create order",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/OrderItem" }
+                },
+                "note": { "type": "string" }
+              },
+              "required": ["items"]
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created order",
+            "schema": { "$ref": "#/definitions/Order" }
+          }
+        }
+      }
+    },
+    "/orders/{orderId}": {
+      "get": {
+        "tags": ["orders"],
+        "operationId": "getOrder",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order",
+            "schema": { "$ref": "#/definitions/Order" }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Order": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "status": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/OrderItem" }
+        }
+      },
+      "required": ["id", "status", "items"]
+    },
+    "OrderItem": {
+      "type": "object",
+      "properties": {
+        "sku": { "type": "string" },
+        "quantity": { "type": "integer", "format": "int32" }
+      },
+      "required": ["sku", "quantity"]
+    }
+  }
+}

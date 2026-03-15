@@ -9,7 +9,12 @@ describe("createAiCapabilitiesMiddleware", () => {
   it("serves well-known manifest with public capabilities only", async () => {
     const manifest = buildManifest();
     const runtime = createRuntime(manifest);
-    const handler = createAiCapabilitiesMiddleware({ runtime, manifest, mode: "internal" });
+    const handler = createAiCapabilitiesMiddleware({
+      runtime,
+      manifest,
+      publicManifest: buildPublicOnlyManifest(manifest),
+      mode: "internal",
+    });
 
     const result = await invoke(handler, { method: "GET", url: "/.well-known/ai-capabilities.json" });
     expect(result.nextCalled).toBe(false);
@@ -53,7 +58,12 @@ describe("createAiCapabilitiesMiddleware", () => {
   it("rejects private capabilities in public mode", async () => {
     const manifest = buildManifest();
     const runtime = createRuntime(manifest);
-    const handler = createAiCapabilitiesMiddleware({ runtime, manifest, mode: "public" });
+    const handler = createAiCapabilitiesMiddleware({
+      runtime,
+      manifest,
+      publicManifest: buildPublicOnlyManifest(manifest),
+      mode: "public",
+    });
 
     const result = await invoke(handler, {
       method: "POST",
@@ -90,6 +100,7 @@ describe("createAiCapabilitiesMiddleware", () => {
     const handler = createAiCapabilitiesMiddleware({
       runtime,
       manifest,
+      publicManifest: buildPublicOnlyManifest(manifest),
       basePath: "/ai",
     });
 
@@ -124,6 +135,44 @@ describe("createAiCapabilitiesMiddleware", () => {
     const payload = expectError(result.payload);
     expect(payload.error.code).toBe("RUNTIME_ERROR");
   });
+
+  it("returns PUBLIC_MANIFEST_MISSING when discovery is requested without public manifest", async () => {
+    const manifest = buildManifest();
+    const runtime = createRuntime(manifest);
+    const handler = createAiCapabilitiesMiddleware({ runtime, manifest });
+
+    const result = await invoke(handler, { method: "GET", url: "/.well-known/ai-capabilities.json" });
+    expect(result.statusCode).toBe(404);
+    const payload = expectError(result.payload);
+    expect(payload.error.code).toBe("PUBLIC_MANIFEST_MISSING");
+  });
+
+  it("supports unsafe fallback for development when enabled", async () => {
+    const manifest = buildManifest();
+    const runtime = createRuntime(manifest);
+    const handler = createAiCapabilitiesMiddleware({
+      runtime,
+      manifest,
+      allowUnsafePublicFallback: true,
+    });
+
+    const result = await invoke(handler, { method: "GET", url: "/.well-known/ai-capabilities.json" });
+    expect(result.statusCode).toBe(200);
+    const payload = expectSuccess(result.payload);
+    expect(payload.data.capabilities).toHaveLength(1);
+  });
+
+  it("throws when public mode lacks a public manifest", () => {
+    const manifest = buildManifest();
+    const runtime = createRuntime(manifest);
+    expect(() =>
+      createAiCapabilitiesMiddleware({
+        runtime,
+        manifest,
+        mode: "public",
+      }),
+    ).toThrow(/requires options\.publicManifest/);
+  });
 });
 
 function buildManifest(): AiCapabilitiesManifest {
@@ -155,6 +204,13 @@ function buildManifest(): AiCapabilitiesManifest {
         metadata: {},
       },
     ],
+  };
+}
+
+function buildPublicOnlyManifest(manifest: AiCapabilitiesManifest): AiCapabilitiesManifest {
+  return {
+    ...manifest,
+    capabilities: manifest.capabilities.filter((cap) => cap.policy.visibility === "public"),
   };
 }
 

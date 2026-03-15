@@ -16,17 +16,17 @@ describe("initProject", () => {
     expect(result.config.status).toBe("created");
     expect(result.scaffold.every((r) => r.status === "created")).toBe(true);
     expect(existsSync(join(dir, "ai-capabilities.config.json"))).toBe(true);
-    expect(existsSync(join(dir, "src/ai-capabilities/index.ts"))).toBe(true);
-    expect(existsSync(join(dir, "src/ai-capabilities/registry.ts"))).toBe(true);
-    expect(existsSync(join(dir, "src/ai-capabilities/capabilities/exampleCapability.ts"))).toBe(true);
+    expect(existsSync(join(dir, "src/app-capabilities/index.ts"))).toBe(true);
+    expect(existsSync(join(dir, "src/app-capabilities/registry.ts"))).toBe(true);
+    expect(existsSync(join(dir, "src/app-capabilities/capabilities/exampleCapability.ts"))).toBe(true);
   });
 
   it("does not overwrite existing files", async () => {
     const dir = setupDir();
     const configPath = join(dir, "ai-capabilities.config.json");
     writeFileSync(configPath, "{\n  \"project\": {}\n}\n", "utf-8");
-    const registryPath = join(dir, "src/ai-capabilities/registry.ts");
-    mkdirSync(join(dir, "src/ai-capabilities"), { recursive: true });
+    const registryPath = join(dir, "src/app-capabilities/registry.ts");
+    mkdirSync(join(dir, "src/app-capabilities"), { recursive: true });
     writeFileSync(registryPath, "export const capabilities = [];\n", "utf-8");
 
     const result = await initProject({ cwd: dir });
@@ -44,6 +44,14 @@ describe("initProject", () => {
     expect(result.nextSteps.some((step) => step.includes("scaffold"))).toBe(true);
   });
 
+  it("reuses legacy ai-capabilities directory when present", async () => {
+    const dir = setupDir();
+    mkdirSync(join(dir, "src/ai-capabilities"), { recursive: true });
+    const result = await initProject({ cwd: dir });
+    expect(existsSync(join(dir, "src/ai-capabilities/index.ts"))).toBe(true);
+    expect(result.scaffold.some((entry) => entry.path.includes("src/ai-capabilities"))).toBe(true);
+  });
+
   it("injects detected project name into config", async () => {
     const dir = setupDir();
     writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "test-app" }, null, 2));
@@ -56,7 +64,7 @@ describe("initProject", () => {
     const dir = setupDir();
     await initProject({ cwd: dir });
     const example = readFileSync(
-      join(dir, "src/ai-capabilities/capabilities/exampleCapability.ts"),
+      join(dir, "src/app-capabilities/capabilities/exampleCapability.ts"),
       "utf-8",
     );
     expect(example).toContain("example.echo");

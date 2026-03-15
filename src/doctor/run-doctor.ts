@@ -4,6 +4,7 @@ import { loadConfig } from "../config/load-config.js";
 import type { ResolvedConfig } from "../config/types.js";
 import type { AiCapabilitiesManifest, AiCapability } from "../types/index.js";
 import { BindingResolver, BindingRegistry } from "../binding/index.js";
+import { formatLegacyWarning, resolveCapabilityDirs, PREFERRED_CAPABILITY_DIR } from "../utils/capability-dirs.js";
 import type {
   DoctorRunOptions,
   DoctorReport,
@@ -86,6 +87,15 @@ export async function runDoctor(options: DoctorRunOptions = {}): Promise<DoctorR
       nextSteps.push("Run npx ai-capabilities extract");
     }
   }
+  if (!outputChecks.public?.exists) {
+    issues.push({
+      code: "PUBLIC_MANIFEST_MISSING",
+      severity: "medium",
+      message:
+        "Public manifest not found. Run `npx ai-capabilities manifest public` or re-run extract to regenerate it.",
+    });
+    nextSteps.push("Generate public manifest: npx ai-capabilities manifest public");
+  }
   if (outputChecks.canonical?.exists && manifestError) {
     issues.push({
       code: "CANONICAL_MANIFEST_INVALID",
@@ -149,9 +159,16 @@ export async function runDoctor(options: DoctorRunOptions = {}): Promise<DoctorR
     issues.push({
       code: "NO_LOCAL_SCAFFOLD",
       severity: "low",
-      message: "Local capability scaffold not found (expected src/ai-capabilities/).",
+      message: `Local capability scaffold not found (expected ${PREFERRED_CAPABILITY_DIR}/).`,
     });
     nextSteps.push("Run npx ai-capabilities init to create the scaffold");
+  } else if (scaffold.variant === "legacy") {
+    issues.push({
+      code: "LEGACY_CAPABILITY_DIR",
+      severity: "medium",
+      message: formatLegacyWarning(),
+    });
+    nextSteps.push("Rename src/ai-capabilities → src/app-capabilities to avoid import collisions");
   }
 
   const status = determineStatus({ config: finalConfig, stats, manifestPresent: outputChecks.canonical?.exists ?? false });
@@ -256,19 +273,22 @@ function analyzeManifest(manifest: AiCapabilitiesManifest): DoctorCapabilityStat
 }
 
 function detectScaffold(projectPath: string, rel: (path: string) => string): DoctorScaffoldInfo {
-  const base = resolve(projectPath, "src/ai-capabilities");
-  const registry = join(base, "registry.ts");
-  const capDir = join(base, "capabilities");
+  const dirs = resolveCapabilityDirs(projectPath);
+  const base = dirs.root.absolute;
+  const capDir = dirs.capabilitiesDir.absolute;
   const example = join(capDir, "exampleCapability.ts");
-  const present = existsSync(base);
-  const info: DoctorScaffoldInfo = {
-    present,
+  return {
+    present: dirs.root.exists,
     directory: rel(base),
-    registryExists: existsSync(registry),
+    registryExists: mkdirAwareExists(dirs.registryFile.absolute),
     capabilitiesDirExists: existsSync(capDir),
     exampleCapabilityExists: existsSync(example),
+    variant: dirs.root.variant,
   };
-  return info;
+}
+
+function mkdirAwareExists(path: string): boolean {
+  return existsSync(path);
 }
 
 function buildSafetyWarnings(stats?: DoctorCapabilityStats, manifest?: AiCapabilitiesManifest): string[] {

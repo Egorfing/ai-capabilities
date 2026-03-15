@@ -3,9 +3,14 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { ParsedArgs } from "../parse-args.js";
 import type { AiCapabilitiesManifest, AiCapability, CapabilityPolicy } from "../../types/index.js";
+import {
+  PREFERRED_CAPABILITY_DIR,
+  resolveCapabilityDirs,
+  formatLegacyWarning,
+} from "../../utils/capability-dirs.js";
 
 const DEFAULT_MANIFEST_PATH = "output/ai-capabilities.json";
-const DEFAULT_CAPABILITIES_DIR = "src/ai-capabilities/capabilities";
+const DEFAULT_CAPABILITIES_DIR = `${PREFERRED_CAPABILITY_DIR}/capabilities`;
 const DESTRUCTIVE_PATTERN = /(delete|remove|drop|destroy)/i;
 
 export const scaffoldHelp = `
@@ -32,9 +37,15 @@ export async function runScaffoldCommand(args: ParsedArgs): Promise<void> {
   const manifestPath = resolveFromCwd(
     typeof args.flags.manifest === "string" ? args.flags.manifest : DEFAULT_MANIFEST_PATH,
   );
-  const capabilitiesDir = resolveFromCwd(
-    typeof args.flags.dir === "string" ? args.flags.dir : DEFAULT_CAPABILITIES_DIR,
-  );
+
+  const capabilityDirs = resolveCapabilityDirs(process.cwd());
+  const dirProvided = typeof args.flags.dir === "string";
+  const resolvedDir = dirProvided ? (args.flags.dir as string) : capabilityDirs.capabilitiesDir.relative;
+  const capabilitiesDir = resolveFromCwd(resolvedDir ?? DEFAULT_CAPABILITIES_DIR);
+
+  if (!dirProvided && capabilityDirs.root.variant === "legacy") {
+    console.warn(formatLegacyWarning());
+  }
 
   const manifest = await loadManifest(manifestPath);
 

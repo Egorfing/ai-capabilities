@@ -13,7 +13,7 @@ npx ai-capabilities doctor --project ../app --config ./ai-capabilities.config.js
 - **Output artifacts** – raw/canonical/public/enriched manifests, diagnostics, traces.
 - **Capabilities** – total count, by kind/visibility, executable vs unbound, high-risk/confirmation stats.
 - **Executability** – uses existing manifest execution data/bindings to flag unbound capabilities.
-- **Local scaffold** – detects `src/ai-capabilities/` registry + example capability.
+- **Local scaffold** – detects `src/app-capabilities/` registry + example capability.
 - **Safety** – heuristic warnings for public high-risk actions or destructive identifiers.
 - **Pilot readiness** – classifies the integration (Not initialized → Pilot ready).
 

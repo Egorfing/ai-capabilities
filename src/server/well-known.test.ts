@@ -59,18 +59,19 @@ function buildManifest(): AiCapabilitiesManifest {
   };
 }
 
-function createContext(manifest: AiCapabilitiesManifest): RouteContext {
+function createContext(manifest: AiCapabilitiesManifest, publicManifest?: AiCapabilitiesManifest): RouteContext {
   const runtime: CapabilityRuntimeInterface = {
     execute: vi.fn(),
     getManifest: () => manifest,
   };
   const state: ServerState = {
     manifest,
-    publicManifest: undefined,
+    publicManifest,
     runtime,
     mode: "internal",
     tracesDir: undefined,
     logger: console,
+    allowUnsafePublicFallback: false,
   };
   const stream = new PassThrough();
   stream.end();
@@ -87,7 +88,7 @@ function createContext(manifest: AiCapabilitiesManifest): RouteContext {
 describe("handleWellKnown", () => {
   it("returns only public capabilities with sanitized fields", async () => {
     const manifest = buildManifest();
-    const ctx = createContext(manifest);
+    const ctx = createContext(manifest, buildPublicManifest(manifest));
     const result = await handleWellKnown(ctx);
     expect(result.statusCode).toBe(200);
     expect(result.body.status).toBe("success");
@@ -105,14 +106,30 @@ describe("handleWellKnown", () => {
   it("handles empty public manifest", async () => {
     const manifest = buildManifest();
     manifest.capabilities = manifest.capabilities.filter((cap) => cap.policy.visibility !== "public");
-    const ctx = createContext(manifest);
+    const ctx = createContext(manifest, buildPublicManifest(manifest));
     const result = await handleWellKnown(ctx);
     expect(result.statusCode).toBe(200);
     if (result.body.status !== "success") throw new Error("expected success");
     const data = result.body.data as any;
     expect(data.capabilities).toHaveLength(0);
   });
+
+  it("returns error when public manifest is missing", async () => {
+    const manifest = buildManifest();
+    const ctx = createContext(manifest);
+    await expect(handleWellKnown(ctx)).rejects.toMatchObject({
+      statusCode: 404,
+      code: "PUBLIC_MANIFEST_MISSING",
+    });
+  });
 });
+
+function buildPublicManifest(manifest: AiCapabilitiesManifest): AiCapabilitiesManifest {
+  return {
+    ...manifest,
+    capabilities: manifest.capabilities.filter((cap) => cap.policy.visibility === "public"),
+  };
+}
 
 describe("well-known golden snapshot", () => {
   it("matches fixture response", () => {

@@ -12,7 +12,7 @@ User → Local agent → Capability runtime → Application data/UI
 2. **Local agent** (`examples/react-app/src/agent/localAgent.ts`) parses the intent and plans two capability calls:
    - `projects.create` (mutation)
    - `navigation.open-project-page` (UI action)
-3. **Capability runtime** (`examples/react-app/src/agent/runtime.ts`) validates policies and executes handlers from `src/ai-capabilities/capabilities`.
+3. **Capability runtime** (`examples/react-app/src/agent/runtime.ts`) validates policies and executes handlers from `src/app-capabilities/capabilities`.
 4. **UI** (`examples/react-app/src/components/AiChat.tsx`) renders chat messages and shows console logs for each capability invocation.
 
 ## Step-by-step
@@ -21,7 +21,7 @@ User → Local agent → Capability runtime → Application data/UI
 | --- | --- | --- | --- |
 | 1 | User input | Developer enters a natural-language command in AiChat. | `examples/react-app/src/components/AiChat.tsx` |
 | 2 | Intent → plan | The rule-based agent inspects the string, classifies it as “create project”, and prepares a capability queue. | `createPlanFromText` in `examples/react-app/src/agent/localAgent.ts` |
-| 3 | Capability execution | The runtime executes `projects.create`, persisting data in the in-memory store. | `examples/react-app/src/ai-capabilities/capabilities/createProject.ts` |
+| 3 | Capability execution | The runtime executes `projects.create`, persisting data in the in-memory store. | `examples/react-app/src/app-capabilities/capabilities/createProject.ts` |
 | 4 | Result handling | The agent logs the result, replies in chat, and immediately runs `navigation.open-project-page` with the new ID. | `executePlan` in `localAgent.ts` |
 | 5 | UI feedback | The runtime injects router/ui adapters so the navigation capability pushes the new route and triggers a toast. | `examples/react-app/src/agent/runtime.ts` + `AiChat.tsx` |
 

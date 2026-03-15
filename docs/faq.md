@@ -22,18 +22,18 @@ For guided onboarding see [docs/happy-path.md](./happy-path.md) and [docs/llm-on
   npx ai-capabilities doctor
   ```
 
-**Q: Why do I have both \`src/ai-capabilities\` and \`output/\` directories?**
+**Q: Why do I have both \`src/app-capabilities\` and \`output/\` directories?**
 - **Answer:** They serve different purposes:
-  - `src/ai-capabilities/**/*` is authored code—capability definitions, registries, runtime helpers, and frontend adapters that you own and review.
+  - `src/app-capabilities/**/*` is authored code—capability definitions, registries, runtime helpers, and frontend adapters that you own and review.
   - `output/**/*` is generated data—manifests, diagnostics, and traces produced by CLI commands (`extract`, `inspect`, `enrich`, `trace`). Delete/regenerate these instead of editing them manually.
-- **Workflow:** Run `extract`/`inspect` to populate `output/`, pick the extracted ids you care about, then convert them into executable code under `src/ai-capabilities` (often via `defineCapabilityFromExtracted` or the `scaffold` command).
+- **Workflow:** Run `extract`/`inspect` to populate `output/`, pick the extracted ids you care about, then convert them into executable code under `src/app-capabilities` (often via `defineCapabilityFromExtracted` or the `scaffold` command).
 
 **Q: Can I generate safe capability files in bulk?**
 - **Answer:** Yes. Use the auto-bind helper:
   ```bash
-  npx ai-capabilities auto-bind --manifest ./output/ai-capabilities.json --dir ./src/ai-capabilities/auto --dry-run
+  npx ai-capabilities auto-bind --manifest ./output/ai-capabilities.json --dir ./src/app-capabilities/auto --dry-run
   ```
-  Review the plan, rerun without `--dry-run`, then register the generated files (they land in `src/ai-capabilities/auto/`). Auto-bind only targets safe reads and create/update mutations and skips destructive IDs so you can scaffold those manually.
+  Review the plan, rerun without `--dry-run`, then register the generated files (they land in `src/app-capabilities/auto/`). Auto-bind only targets safe reads and create/update mutations and skips destructive IDs so you can scaffold those manually.
 
 ## Extraction Issues
 
@@ -46,7 +46,7 @@ For guided onboarding see [docs/happy-path.md](./happy-path.md) and [docs/llm-on
   Paste the template + source snippet into your assistant, review the output, and update the capability file.
 
 **Q: `inspect` shows duplicate sources.**
-- **Cause:** Multiple extractors detected the same logical action (e.g., OpenAPI + React Query).
+- **Cause:** Multiple extractors detected the same logical action (e.g., OpenAPI/Swagger spec + React Query hook).
 - **Fix:** Adjust `paths.include/exclude` in `ai-capabilities.config.json`, or centrally define the capability via `defineCapability` and exclude overlapping files.
 
 ## Runtime Issues
@@ -58,7 +58,7 @@ For guided onboarding see [docs/happy-path.md](./happy-path.md) and [docs/llm-on
   import { registerCapabilityDefinitions } from "ai-capabilities";
   registerCapabilityDefinitions(registry, [createProjectCapability]);
   ```
-  Verify that your runtime (see `examples/react-app/src/ai-capabilities/registry.ts`) is imported before `runtime.execute` is called, then rerun `npx ai-capabilities doctor`.
+  Verify that your runtime (see `examples/react-app/src/app-capabilities/registry.ts`) is imported before `runtime.execute` is called, then rerun `npx ai-capabilities doctor`.
 
 **Q: Runtime returns `HANDLER_NOT_FOUND`.**
 - **Cause:** Capability not registered in your `CapabilityRegistry`.
@@ -99,7 +99,7 @@ For guided onboarding see [docs/happy-path.md](./happy-path.md) and [docs/llm-on
 
 **Q: Why does doctor still say “Discoverable but not executable” after I add UI capabilities?**
 - **Cause:** Doctor only considers capabilities executable when a runtime binding exists. Pure UI definitions that never register with the runtime (or lack context adapters) remain unbound.
-- **Fix:** Ensure you export your capability array from `src/ai-capabilities/index.ts`, import it wherever you construct the runtime, and provide the `handlerContext` adapters shown above.
+- **Fix:** Ensure you export your capability array from `src/app-capabilities/index.ts`, import it wherever you construct the runtime, and provide the `handlerContext` adapters shown above.
 
 ## Safety Questions
 

@@ -27,7 +27,7 @@ Report the current state back to the developer (and use it as your working notes
 - Safe read candidates vs. safe mutations vs. destructive actions.
 - Capabilities with empty schemas or missing runtime bindings (“unbound”).
 - Whether `output/ai-capabilities*.json` is up to date.
-- Whether `src/ai-capabilities/**/*` exists (list key files such as `capabilities/*.ts`, `registry.ts`, runtime helpers).
+- Whether `src/app-capabilities/**/*` exists (list key files such as `capabilities/*.ts`, `registry.ts`, runtime helpers).
 - Whether `detect-llm` found an existing chat/LLM stack (and which provider/framework it uses).
 
 ## Step 3 — Ask only what’s missing
@@ -39,10 +39,10 @@ After the summary, ask concise questions limited to unknowns:
 - If no provider was detected, which LLM stack should we integrate (OpenAI, Anthropic, Azure OpenAI, internal SDK, etc.)?
 
 ## Step 4 — Generate capabilities
-- Run `npx ai-capabilities auto-bind --dry-run` to preview safe read/create files; rerun without `--dry-run` to generate `src/ai-capabilities/auto/*.ts`, then review them.
+- Run `npx ai-capabilities auto-bind --dry-run` to preview safe read/create files; rerun without `--dry-run` to generate `src/app-capabilities/auto/*.ts`, then review them.
 - Use `npx ai-capabilities scaffold --id <capability-id>` for mutations, UI flows, or anything requiring manual review.
 - Implement handlers with `defineCapabilityFromExtracted` (for promoted hooks) or `defineCapability` (for bespoke actions). Fill policies, aliases, example intents.
-- Register everything via `src/ai-capabilities/registry.ts` (or the project’s equivalent) using `registerCapabilityDefinitions`.
+- Register everything via `src/app-capabilities/registry.ts` (or the project’s equivalent) using `registerCapabilityDefinitions`.
 
 ## Step 5 — Integrate with the agent stack
 - If `detect-llm` found an existing chat/runtime, extend it instead of creating a duplicate. Import the canonical manifest, call `CapabilityRuntime`, and reuse router/ui adapters.

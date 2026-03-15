@@ -18,6 +18,9 @@ import { runScaffoldCommand } from "./commands/scaffold.js";
 import { runDetectLlmCommand } from "./commands/detect-llm.js";
 import { runAutoBindCommand } from "./commands/auto-bind.js";
 import { runQuickScanCommand } from "./commands/quick-scan.js";
+import { runManifestPublicCommand, manifestPublicHelp } from "./commands/manifest.js";
+import { runStatusCommand } from "./commands/status.js";
+import { ensureInitializedForCommand } from "./preflight.js";
 
 const MAIN_HELP = `
 capability-engine — AI Capability Extraction + Agent Runtime
@@ -38,6 +41,8 @@ Commands:
   scaffold      Generate defineCapabilityFromExtracted scaffolds
   auto-bind     Auto-generate safe capability files from extracted manifest
   detect-llm    Detect existing AI/LLM stacks in the project
+  status        Show lifecycle status for each capability
+  manifest public  Generate sanitized public manifest snapshot
 
 Options:
   --help        Show help for a command
@@ -53,9 +58,29 @@ Examples:
   capability-engine init
 `.trim();
 
+const INIT_REQUIRED_COMMANDS = new Set(["quick-scan", "extract", "inspect", "enrich", "pilot", "manifest public", "status"]);
+
+function normalizeCommandLabel(raw: string): string {
+  return raw && raw.trim() ? raw : "quick-scan";
+}
+
+function commandRequiresInit(commandLabel: string): boolean {
+  return INIT_REQUIRED_COMMANDS.has(commandLabel);
+}
+
 const parsed = parseArgs(process.argv);
 
 async function main() {
+  const commandLabel = normalizeCommandLabel(parsed.command);
+  if (!parsed.flags.help && commandRequiresInit(commandLabel)) {
+    const explicitConfigPath = typeof parsed.flags.config === "string" ? parsed.flags.config : undefined;
+    await ensureInitializedForCommand({
+      cwd: process.cwd(),
+      commandLabel,
+      explicitConfigPath,
+    });
+  }
+
   switch (parsed.command) {
     case "extract":
       await runExtract(parsed);
@@ -92,6 +117,15 @@ async function main() {
       break;
     case "detect-llm":
       await runDetectLlmCommand(parsed);
+      break;
+    case "manifest public":
+      await runManifestPublicCommand(parsed);
+      break;
+    case "status":
+      await runStatusCommand(parsed);
+      break;
+    case "manifest":
+      console.log(manifestPublicHelp);
       break;
     case "doctor":
       await runDoctorCommand(parsed);

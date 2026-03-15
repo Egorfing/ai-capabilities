@@ -86,14 +86,14 @@ describe("auto-bind CLI command", () => {
       command: "auto-bind",
       flags: {
         manifest: manifestPath,
-        dir: path.join(workspace.dir, "src/ai-capabilities/auto"),
+        dir: path.join(workspace.dir, "src/app-capabilities/auto"),
       },
       positional: [],
     };
 
     await runAutoBindCommand(args);
 
-    const generatedPath = path.join(workspace.dir, "src/ai-capabilities/auto", "projectsCapability.ts");
+    const generatedPath = path.join(workspace.dir, "src/app-capabilities/auto", "projectsCapability.ts");
     const content = await readFile(generatedPath, "utf-8");
     expect(content).toContain('defineCapabilityFromExtracted');
     expect(content).toContain('sourceId: "hook.projects-query"');
@@ -120,7 +120,7 @@ describe("auto-bind CLI command", () => {
       command: "auto-bind",
       flags: {
         manifest: manifestPath,
-        dir: path.join(workspace.dir, "src/ai-capabilities/auto"),
+        dir: path.join(workspace.dir, "src/app-capabilities/auto"),
       },
       positional: [],
     };
@@ -128,7 +128,7 @@ describe("auto-bind CLI command", () => {
     await runAutoBindCommand(args);
 
     expect(logSpy).toHaveBeenCalledWith("[auto-bind] skipped dangerous:");
-    const generatedPath = path.join(workspace.dir, "src/ai-capabilities/auto", "deleteProjectCapability.ts");
+    const generatedPath = path.join(workspace.dir, "src/app-capabilities/auto", "deleteProjectCapability.ts");
     await expect(access(generatedPath)).rejects.toThrow();
   });
 
@@ -152,7 +152,7 @@ describe("auto-bind CLI command", () => {
       command: "auto-bind",
       flags: {
         manifest: manifestPath,
-        dir: path.join(workspace.dir, "src/ai-capabilities/auto"),
+        dir: path.join(workspace.dir, "src/app-capabilities/auto"),
         "dry-run": true,
       },
       positional: [],
@@ -161,7 +161,7 @@ describe("auto-bind CLI command", () => {
     await runAutoBindCommand(args);
 
     expect(logSpy).toHaveBeenCalledWith("[auto-bind] dry-run: no files written");
-    const generatedPath = path.join(workspace.dir, "src/ai-capabilities/auto", "currentUserCapability.ts");
+    const generatedPath = path.join(workspace.dir, "src/app-capabilities/auto", "currentUserCapability.ts");
     await expect(access(generatedPath)).rejects.toThrow();
   });
 
@@ -183,14 +183,14 @@ describe("auto-bind CLI command", () => {
       command: "auto-bind",
       flags: {
         manifest: manifestPath,
-        dir: path.join(workspace.dir, "src/ai-capabilities/auto"),
+        dir: path.join(workspace.dir, "src/app-capabilities/auto"),
       },
       positional: [],
     };
 
     await runAutoBindCommand(args);
 
-    const generatedPath = path.join(workspace.dir, "src/ai-capabilities/auto", "createProjectCapability.ts");
+    const generatedPath = path.join(workspace.dir, "src/app-capabilities/auto", "createProjectCapability.ts");
     const content = await readFile(generatedPath, "utf-8");
     expect(content).toContain('sourceId: "hook.create-project-mutation"');
     expect(content).toContain("TODO: implement");

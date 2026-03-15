@@ -3,6 +3,7 @@ import type { AddressInfo } from "node:net";
 import { handleCapabilities, handleExecute, handleHealth, handleTraces, handleWellKnown } from "./routes.js";
 import type {
   CapabilityHttpServer,
+  Logger,
   ServerDependencies,
   ServerOptions,
   ServerInfo,
@@ -14,6 +15,7 @@ import { HttpError } from "./server-types.js";
 import { sendJson, withMeta, failure } from "./response-builders.js";
 import type { JsonResponse } from "./response-builders.js";
 import { createTraceWriter, runtimeEvent } from "../trace/index.js";
+import { buildPublicManifestSnapshot } from "../manifest/public-manifest.js";
 
 const ROUTES: Record<string, (ctx: RouteContext) => Promise<RouteResult>> = {
   "GET /health": handleHealth,
@@ -29,14 +31,18 @@ export function createServer(
 ): CapabilityHttpServer {
   const normalized = normalizeServerOptions(options);
   const logger = deps.logger ?? console;
+  const unsafeFallbackActive = Boolean(deps.allowUnsafePublicFallback && !deps.publicManifest);
+  const publicManifest = deps.publicManifest ?? (unsafeFallbackActive ? buildPublicManifestSnapshot(deps.manifest) : undefined);
   const state: ServerState = {
     manifest: deps.manifest,
-    publicManifest: deps.publicManifest,
+    publicManifest,
     runtime: deps.runtime,
     mode: normalized.mode,
     tracesDir: deps.tracesDir,
     logger,
+    allowUnsafePublicFallback: unsafeFallbackActive,
   };
+  logWellKnownStatus(state, logger);
 
   const tracer = new TransportTracer(deps.tracesDir);
 
@@ -189,4 +195,20 @@ class TransportTracer {
       }),
     );
   }
+}
+
+function logWellKnownStatus(state: ServerState, logger: Logger): void {
+  if (state.publicManifest && !state.allowUnsafePublicFallback) {
+    logger.log(
+      `[server] well-known: enabled (${state.publicManifest.capabilities.length} public capabilities)`,
+    );
+    return;
+  }
+  if (state.publicManifest && state.allowUnsafePublicFallback) {
+    (logger.warn ?? logger.log)(
+      "[server] well-known: UNSAFE fallback enabled — filtering canonical manifest. Do not use in production.",
+    );
+    return;
+  }
+  logger.log("[server] well-known: disabled (no public manifest provided)");
 }

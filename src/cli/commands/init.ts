@@ -5,7 +5,7 @@ import { initProject } from "../../init/index.js";
 export const initHelp = `
 Usage: ai-capabilities init
 
-Bootstrap ai-capabilities.config.json and src/ai-capabilities scaffold.
+Bootstrap ai-capabilities.config.json and src/app-capabilities scaffold (legacy projects may still use src/ai-capabilities).
 
 Options:
   --help        Show this help message
@@ -34,6 +34,6 @@ export async function runInitCommand(args: ParsedArgs): Promise<void> {
   });
 
   console.log("\nFolders:");
-  console.log("  src/ai-capabilities  → code you author and review");
+  console.log("  src/app-capabilities → code you author and review (legacy: src/ai-capabilities)");
   console.log("  output/              → generated manifests (safe to delete, regenerate via npx ai-capabilities extract)");
 }

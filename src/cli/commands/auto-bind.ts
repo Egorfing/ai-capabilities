@@ -3,6 +3,11 @@ import path from "node:path";
 import type { ParsedArgs } from "../parse-args.js";
 import type { AiCapabilitiesManifest, AiCapability, CapabilityPolicy } from "../../types/index.js";
 import {
+  PREFERRED_CAPABILITY_DIR,
+  resolveCapabilityDirs,
+  formatLegacyWarning,
+} from "../../utils/capability-dirs.js";
+import {
   analyzeAutoBindCandidates,
   buildCapabilityFileBase,
   type AutoDecision,
@@ -10,7 +15,7 @@ import {
 } from "../../auto-bind/auto-bind-planner.js";
 
 const DEFAULT_MANIFEST_PATH = "output/ai-capabilities.json";
-const DEFAULT_AUTO_DIR = "src/ai-capabilities/auto";
+const DEFAULT_AUTO_DIR = `${PREFERRED_CAPABILITY_DIR}/auto`;
 const DESTRUCTIVE_PATTERN = /(delete|remove|drop|destroy|wipe|reset|terminate)/i;
 
 export const autoBindHelp = `
@@ -41,7 +46,14 @@ export async function runAutoBindCommand(args: ParsedArgs): Promise<void> {
   const manifestPath = resolveFromCwd(
     typeof args.flags.manifest === "string" ? args.flags.manifest : DEFAULT_MANIFEST_PATH,
   );
-  const targetDir = resolveFromCwd(typeof args.flags.dir === "string" ? args.flags.dir : DEFAULT_AUTO_DIR);
+
+  const capabilityDirs = resolveCapabilityDirs(process.cwd());
+  const dirProvided = typeof args.flags.dir === "string";
+  const targetDirInput = dirProvided ? (args.flags.dir as string) : capabilityDirs.autoDir.relative;
+  const targetDir = resolveFromCwd(targetDirInput ?? DEFAULT_AUTO_DIR);
+  if (!dirProvided && capabilityDirs.root.variant === "legacy") {
+    console.warn(formatLegacyWarning());
+  }
   const dryRun = Boolean(args.flags["dry-run"] ?? args.flags.dryrun ?? args.flags.dryRun);
 
   const manifest = await loadManifest(manifestPath);
@@ -131,7 +143,7 @@ export async function runAutoBindCommand(args: ParsedArgs): Promise<void> {
   }
 
   console.log(
-    "\nNext steps:\n  1. Review generated files\n  2. Register them in src/ai-capabilities/registry.ts\n  3. Run npx ai-capabilities doctor",
+    `\nNext steps:\n  1. Review generated files\n  2. Register them in ${capabilityDirs.registryFile.relative} (or your custom registry)\n  3. Run npx ai-capabilities doctor`,
   );
 }
 

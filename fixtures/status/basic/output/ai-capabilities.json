@@ -1,0 +1,36 @@
+{
+  "manifestVersion": "1.0.0",
+  "generatedAt": "2026-03-14T00:00:00.000Z",
+  "app": { "name": "Status Fixture" },
+  "defaults": {
+    "visibility": "internal",
+    "riskLevel": "low",
+    "confirmationPolicy": "none"
+  },
+  "capabilities": [
+    {
+      "id": "cap.placeholder",
+      "kind": "mutation",
+      "displayTitle": "Placeholder",
+      "description": "Placeholder cap",
+      "inputSchema": { "type": "object" },
+      "policy": { "visibility": "internal", "riskLevel": "low", "confirmationPolicy": "once" }
+    },
+    {
+      "id": "cap.authored",
+      "kind": "read",
+      "displayTitle": "Authored",
+      "description": "Authored cap",
+      "inputSchema": { "type": "object" },
+      "policy": { "visibility": "internal", "riskLevel": "low", "confirmationPolicy": "none" }
+    },
+    {
+      "id": "cap.manifestOnly",
+      "kind": "read",
+      "displayTitle": "Manifest only",
+      "description": "Manifest only",
+      "inputSchema": { "type": "object" },
+      "policy": { "visibility": "internal", "riskLevel": "low", "confirmationPolicy": "none" }
+    }
+  ]
+}

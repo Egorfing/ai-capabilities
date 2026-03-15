@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// OpenAPI extractor: parse OpenAPI 3.x / Swagger 2.x specs → RawCapability[]
+// OpenAPI extractor: parse OpenAPI 3.x / Swagger 2.0 specs → RawCapability[]
 // ---------------------------------------------------------------------------
 
 import { readFileSync, existsSync } from "node:fs";
@@ -24,9 +24,72 @@ const SPEC_FILENAMES = [
   "swagger.yml",
 ];
 
+type SpecVersion = "openapi3" | "swagger2";
+
 // HTTP methods we care about
 const HTTP_METHODS = ["get", "post", "put", "patch", "delete"] as const;
 type HttpMethod = (typeof HTTP_METHODS)[number];
+
+function detectSpecVersion(spec: Record<string, unknown>): SpecVersion | undefined {
+  const openapi = spec.openapi as string | undefined;
+  if (typeof openapi === "string" && openapi.trim().startsWith("3")) {
+    return "openapi3";
+  }
+  const swagger = spec.swagger as string | undefined;
+  if (typeof swagger === "string" && swagger.trim().startsWith("2")) {
+    return "swagger2";
+  }
+  return undefined;
+}
+
+function mergeParameters(
+  pathParams: Record<string, unknown>[],
+  operationParams: Record<string, unknown>[],
+): Record<string, unknown>[] {
+  const map = new Map<string, Record<string, unknown>>();
+  const add = (param: Record<string, unknown>) => {
+    const name = (param.name as string | undefined) ?? "__unnamed";
+    const loc = ((param.in as string | undefined) ?? "query").toLowerCase();
+    map.set(`${loc}:${name}`, param);
+  };
+  for (const param of pathParams) add(param);
+  for (const param of operationParams) add(param);
+  return Array.from(map.values());
+}
+
+function partitionSwaggerParameters(params: Record<string, unknown>[]): {
+  filteredParams: Record<string, unknown>[];
+  swaggerBodySchema?: Record<string, unknown>;
+} {
+  const filtered: Record<string, unknown>[] = [];
+  let bodySchema: Record<string, unknown> | undefined;
+  for (const param of params) {
+    const location = typeof param.in === "string" ? param.in.toLowerCase() : undefined;
+    if (location === "body") {
+      bodySchema = (param.schema as Record<string, unknown>) ?? undefined;
+      continue;
+    }
+    filtered.push(param);
+  }
+  return { filteredParams: filtered, swaggerBodySchema: bodySchema };
+}
+
+function extractSchemaFromParameter(param: Record<string, unknown>): Record<string, unknown> {
+  const schema = param.schema as Record<string, unknown> | undefined;
+  if (schema && typeof schema === "object") {
+    return schema;
+  }
+  const derived: Record<string, unknown> = {};
+  const type = param.type as string | undefined;
+  if (type) derived.type = type;
+  if (param.items) derived.items = param.items;
+  if (param.enum) derived.enum = param.enum;
+  if (param.format) derived.format = param.format;
+  if (Object.keys(derived).length === 0) {
+    derived.type = "string";
+  }
+  return derived;
+}
 
 // ---- Helpers ---------------------------------------------------------------
 
@@ -78,10 +141,14 @@ function parametersToSchema(
   const required: string[] = [];
 
   for (const p of params) {
-    const name = p.name as string;
+    const name = p.name as string | undefined;
     if (!name) continue;
-    properties[name] = (p.schema as Record<string, unknown>) ?? { type: "string" };
-    if (p.required) required.push(name);
+    const location = typeof p.in === "string" ? p.in.toLowerCase() : undefined;
+    if (location && !["query", "path", "cookie", "formdata"].includes(location)) {
+      continue;
+    }
+    properties[name] = extractSchemaFromParameter(p);
+    if (p.required || location === "path") required.push(name);
   }
 
   const schema: Record<string, unknown> = { type: "object", properties };
@@ -106,12 +173,18 @@ function requestBodySchema(
 /** Extract response schema from first 2xx response. */
 function responseSchema(
   responses: Record<string, unknown> | undefined,
+  version: SpecVersion,
 ): Record<string, unknown> | undefined {
   if (!responses) return undefined;
 
   for (const code of Object.keys(responses)) {
     if (!code.startsWith("2")) continue;
     const resp = responses[code] as Record<string, unknown>;
+    if (version === "swagger2") {
+      const schema = resp?.schema as Record<string, unknown> | undefined;
+      if (schema) return schema;
+      continue;
+    }
     const content = resp?.content as Record<string, unknown> | undefined;
     if (!content) continue;
     const jsonContent = content["application/json"] as Record<string, unknown> | undefined;
@@ -203,7 +276,18 @@ function extractFromSpec(
   spec: Record<string, unknown>,
   specFilePath: string,
   diagnostics: DiagnosticEntry[],
-): RawCapability[] {
+): { capabilities: RawCapability[]; supported: boolean } {
+  const specVersion = detectSpecVersion(spec);
+  if (!specVersion) {
+    diagnostics.push({
+      level: "error",
+      stage: EXTRACTION_STAGE,
+      sourceType: "openapi",
+      message: "Unsupported spec: missing 'openapi' (3.x) or 'swagger' (2.0) version field.",
+      filePath: specFilePath,
+    });
+    return { capabilities: [], supported: false };
+  }
   const paths = spec.paths as Record<string, Record<string, unknown>> | undefined;
   if (!paths) {
     diagnostics.push({
@@ -213,7 +297,7 @@ function extractFromSpec(
       message: "No 'paths' found in spec.",
       filePath: specFilePath,
     });
-    return [];
+    return { capabilities: [], supported: true };
   }
 
   const capabilities: RawCapability[] = [];
@@ -228,16 +312,21 @@ function extractFromSpec(
       const tag = tags?.[0];
 
       const id = buildCapabilityId(method, path, operationId, tag);
-
-      const paramSchema = parametersToSchema(
-        operation.parameters as Record<string, unknown>[] | undefined,
+      const mergedParams = mergeParameters(
+        (pathItem.parameters as Record<string, unknown>[]) ?? [],
+        (operation.parameters as Record<string, unknown>[]) ?? [],
       );
-      const bodySchema = requestBodySchema(
-        operation.requestBody as Record<string, unknown> | undefined,
-      );
+      const { filteredParams, swaggerBodySchema } =
+        specVersion === "swagger2" ? partitionSwaggerParameters(mergedParams) : { filteredParams: mergedParams, swaggerBodySchema: undefined };
+      const paramSchema = parametersToSchema(filteredParams);
+      const bodySchema =
+        specVersion === "swagger2"
+          ? swaggerBodySchema
+          : requestBodySchema(operation.requestBody as Record<string, unknown> | undefined);
       const inputSchema = mergeInputSchemas(paramSchema, bodySchema);
       const outputSchema = responseSchema(
         operation.responses as Record<string, unknown> | undefined,
+        specVersion,
       );
 
       const cap: RawCapability = {
@@ -265,7 +354,7 @@ function extractFromSpec(
     }
   }
 
-  return capabilities;
+  return { capabilities, supported: true };
 }
 
 // ---- Extractor implementation ----------------------------------------------
@@ -289,11 +378,20 @@ export const openApiExtractor: Extractor = {
     }
 
     const allCapabilities: RawCapability[] = [];
+    let processed = 0;
+    let succeeded = 0;
+    let failed = 0;
 
     for (const specFile of specFiles) {
+      processed += 1;
       try {
         const spec = loadSpec(specFile);
-        const caps = extractFromSpec(spec, specFile, diagnostics);
+        const { capabilities: caps, supported } = extractFromSpec(spec, specFile, diagnostics);
+        if (supported) {
+          succeeded += 1;
+        } else {
+          failed += 1;
+        }
         allCapabilities.push(...caps);
         diagnostics.push({
           level: "info",
@@ -304,6 +402,7 @@ export const openApiExtractor: Extractor = {
           details: { count: caps.length },
         });
       } catch (err) {
+        failed += 1;
         diagnostics.push({
           level: "error",
           stage: EXTRACTION_STAGE,
@@ -314,6 +413,14 @@ export const openApiExtractor: Extractor = {
         });
       }
     }
+
+    diagnostics.push({
+      level: failed > 0 ? "warning" : "info",
+      stage: EXTRACTION_STAGE,
+      sourceType: "openapi",
+      message: `OpenAPI extractor summary — processed: ${processed}, succeeded: ${succeeded}, failed: ${failed}`,
+      details: { processed, succeeded, failed },
+    });
 
     return { extractor: "openapi", capabilities: allCapabilities, diagnostics };
   },

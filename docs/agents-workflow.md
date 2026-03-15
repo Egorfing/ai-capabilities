@@ -15,7 +15,7 @@ npx ai-capabilities detect-llm --project .
 - List any dangerous/destructive IDs and whether policy already protects them.
 - Capabilities with empty schemas or missing bindings (`unbound` in doctor output).
 - Whether `output/ai-capabilities*.json` exists and is up to date.
-- Whether `src/ai-capabilities/**/*` exists (list key files such as `capabilities/*.ts`, `registry.ts`).
+- Whether `src/app-capabilities/**/*` exists (list key files such as `capabilities/*.ts`, `registry.ts`).
 
 ## Automatic detection
 - In `package.json`, look for dependencies: `openai`, `ai`, `@ai-sdk/*`, `anthropic`, `langchain`, `vercel-ai`, custom `llm`/`agent` packages.
@@ -32,15 +32,15 @@ npx ai-capabilities detect-llm --project .
 ## What to generate
 - Auto-bind obvious safe reads/creates:
   ```bash
-  npx ai-capabilities auto-bind --manifest ./output/ai-capabilities.json --dir ./src/ai-capabilities/auto --dry-run
+  npx ai-capabilities auto-bind --manifest ./output/ai-capabilities.json --dir ./src/app-capabilities/auto --dry-run
   ```
-  Review the generated files in `src/ai-capabilities/auto/`, then register them.
+  Review the generated files in `src/app-capabilities/auto/`, then register them.
 - Scaffold selected extracted capabilities:
   ```bash
   npx ai-capabilities scaffold --id <extractedId>
   ```
   then implement `defineCapabilityFromExtracted` handlers, aliases, policy, and register them.
-- Update `src/ai-capabilities/registry.ts` (or equivalent) with the new capabilities.
+- Update `src/app-capabilities/registry.ts` (or equivalent) with the new capabilities.
 - Wire the runtime/chat integration into whichever surface already exists (reuse `Chat.tsx`, API routes, or add the minimal example only if nothing exists).
 - Provide step-by-step usage instructions: commands to run, files touched, how to test the capabilities.
 

@@ -3,6 +3,9 @@ import type {
   DefinedCapability,
 } from "./capability-definition-types.js";
 import type { CapabilityHandler } from "../runtime/runtime-types.js";
+import type { CapabilityRegistryRegisterOptions } from "../runtime/index.js";
+import type { JsonSchema } from "../types/index.js";
+import type { CapabilityPolicyDefinition } from "./capability-definition-types.js";
 
 export interface RegistryEntry {
   id: string;
@@ -10,7 +13,11 @@ export interface RegistryEntry {
 }
 
 export interface CapabilityRegistryLike {
-  register: (capabilityId: string, handler: CapabilityHandler) => void;
+  register: (
+    capabilityId: string,
+    handler: CapabilityHandler,
+    options?: CapabilityRegistryRegisterOptions,
+  ) => void;
 }
 
 export function capabilityDefinitionToRegistryEntry(
@@ -32,6 +39,22 @@ export function registerCapabilityDefinitions(
 ): void {
   definitions.forEach((definition) => {
     const entry = capabilityDefinitionToRegistryEntry(definition);
-    registry.register(entry.id, entry.handler);
+    registry.register(entry.id, entry.handler, {
+      overrides: toCapabilityOverrides(definition),
+    });
   });
+}
+
+function toCapabilityOverrides(definition: DefinedCapability): {
+  inputSchema: JsonSchema;
+  outputSchema?: JsonSchema;
+  policy?: CapabilityPolicyDefinition;
+  metadata?: Record<string, unknown>;
+} {
+  return {
+    inputSchema: definition.inputSchema,
+    outputSchema: definition.outputSchema,
+    policy: definition.policy,
+    metadata: definition.metadata,
+  };
 }

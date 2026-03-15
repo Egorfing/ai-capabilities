@@ -5,7 +5,7 @@
 ## Authoring standard
 - **Discovery vs execution:** `inspect`/`extract` tell you what exists, but only `defineCapability*` files describe what the agent is allowed to execute. Treat these helpers as the official DSL for executable capabilities.
 - **Traceability:** `defineCapabilityFromExtracted` keeps `sourceId` so you can cite the original hook (openapi operation, React Query hook, etc.) inside manifests, documentation, and AGENTS workflows.
-- **Consistency:** Every capability under `src/ai-capabilities/**` should follow one of these helpers so schemas, policies, and handlers stay reviewable and easy for LLMs to understand.
+- **Consistency:** Every capability under `src/app-capabilities/**` should follow one of these helpers so schemas, policies, and handlers stay reviewable and easy for LLMs to understand.
 - **Tooling:** `npx ai-capabilities scaffold` and `npx ai-capabilities auto-bind` both emit files that already use these helpers; adopt the same pattern for manual authoring.
 
 Philosophy: extracted capabilities describe *what the app exposes internally*, whereas authored capabilities describe *what the AI agent is trusted to execute*. The helpers bridge that gap.
@@ -147,7 +147,7 @@ npx ai-capabilities scaffold --id hook.create-project-mutation
 ```
 Опциональные флаги:
 - `--manifest ./output/ai-capabilities.json` — использовать конкретный canonical manifest.
-- `--dir ./src/ai-capabilities/capabilities` — контролировать директорию для файлов.
+- `--dir ./src/app-capabilities/capabilities` — контролировать директорию для файлов.
 
 Команда создаёт файл вроде `createProjectCapability.ts`, сразу подключает `defineCapabilityFromExtracted`, копирует `displayTitle`/`description`/`schema`, добавляет `metadata.extractedSourceId` и оставляет `execute` с понятным TODO. После генерации:
 1. Обновите `id` на канонический (`projects.create`).

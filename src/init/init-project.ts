@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, relative } from "node:path";
 import {
   createConfigTemplate,
   createExampleCapabilityTemplate,
@@ -7,6 +7,11 @@ import {
   createRegistryTemplate,
 } from "./templates.js";
 import type { InitFileReport, InitProjectOptions, InitProjectResult } from "./types.js";
+import {
+  formatLegacyWarning,
+  LEGACY_CAPABILITY_DIR,
+  PREFERRED_CAPABILITY_DIR,
+} from "../utils/capability-dirs.js";
 
 export async function initProject(options: InitProjectOptions = {}): Promise<InitProjectResult> {
   const cwd = options.cwd ? resolve(options.cwd) : process.cwd();
@@ -16,9 +21,21 @@ export async function initProject(options: InitProjectOptions = {}): Promise<Ini
   const configPath = join(cwd, "ai-capabilities.config.json");
   const configReport = ensureFile(configPath, createConfigTemplate({ projectName }));
 
-  const indexPath = join(sourceRoot, "ai-capabilities/index.ts");
-  const registryPath = join(sourceRoot, "ai-capabilities/registry.ts");
-  const capabilityPath = join(sourceRoot, "ai-capabilities/capabilities/exampleCapability.ts");
+  const preferredBase = join(sourceRoot, "app-capabilities");
+  const legacyBase = join(sourceRoot, "ai-capabilities");
+  const legacyExists = existsSync(legacyBase);
+  const preferredExists = existsSync(preferredBase);
+  const useLegacy = !preferredExists && legacyExists;
+  const baseDir = useLegacy ? legacyBase : preferredBase;
+  const baseLabel = relative(cwd, baseDir) || (useLegacy ? LEGACY_CAPABILITY_DIR : PREFERRED_CAPABILITY_DIR);
+
+  if (useLegacy) {
+    console.warn(formatLegacyWarning());
+  }
+
+  const indexPath = join(baseDir, "index.ts");
+  const registryPath = join(baseDir, "registry.ts");
+  const capabilityPath = join(baseDir, "capabilities/exampleCapability.ts");
 
   const indexReport = ensureFile(indexPath, createIndexTemplate());
   const registryReport = ensureFile(
@@ -31,7 +48,7 @@ export async function initProject(options: InitProjectOptions = {}): Promise<Ini
     "Inspect your project: npx ai-capabilities inspect",
     "Extract discovered capabilities: npx ai-capabilities extract",
     "Scaffold executable capabilities: npx ai-capabilities scaffold --id <capability-id>",
-    "Register new capabilities in src/ai-capabilities/registry.ts and wire them into your runtime.",
+    `Register new capabilities in ${baseLabel}/registry.ts and wire them into your runtime (legacy: ${LEGACY_CAPABILITY_DIR}).`,
     "Serve or test the runtime: npx ai-capabilities serve",
   ];
 
@@ -75,7 +92,7 @@ function detectProjectName(cwd: string): string {
   }
 }
 
-function detectSourceRoot(cwd: string): string {
+export function detectSourceRoot(cwd: string): string {
   const candidates = ["src", "app", "packages/app/src"];
   for (const candidate of candidates) {
     const absolute = resolve(cwd, candidate);

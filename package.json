@@ -1,6 +1,6 @@
 {
   "name": "ai-capabilities",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Turn your software into an AI-compatible system. AI Capabilities is an open standard for exposing application actions to AI agents.",
   "type": "module",
   "main": "dist/index.js",

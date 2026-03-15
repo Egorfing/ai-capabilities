@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CapabilityRuntime } from "./capability-runtime.js";
 import { CapabilityRegistry } from "./capability-registry.js";
+import type { CapabilityRegistryRegisterOptions } from "./capability-registry.js";
 import type {
   AiCapabilitiesManifest,
   AiCapability,
@@ -53,9 +54,10 @@ const manifest: AiCapabilitiesManifest = {
 function registryWith(
   capId: string,
   handler: (input: Record<string, unknown>, context?: Record<string, unknown>) => unknown,
+  options?: CapabilityRegistryRegisterOptions,
 ) {
   const registry = new CapabilityRegistry();
-  registry.register(capId, handler);
+  registry.register(capId, handler, options);
   return registry;
 }
 
@@ -270,5 +272,83 @@ describe("CapabilityRuntime — policy integration", () => {
     // defaults: public, low, none → should pass in internal mode
     const result = await runtime.execute(createRequest({ orderId: "1" }));
     expect(result.status).toBe("success");
+  });
+});
+
+describe("CapabilityRuntime — authored overrides", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("uses authored confirmation policy over manifest", async () => {
+    const registry = registryWith(
+      "orders.create",
+      async (input) => ({ ok: input.orderId }),
+      {
+        overrides: {
+          policy: { confirmationPolicy: "none" },
+          inputSchema: manifest.capabilities[0].inputSchema,
+        },
+      },
+    );
+    const runtime = new CapabilityRuntime({ manifest, registry });
+
+    const result = await runtime.execute(createRequest({ orderId: "321" }));
+    expect(result.status).toBe("success");
+  });
+
+  it("respects authored input schema overrides", async () => {
+    const overrideSchema = {
+      type: "object",
+      properties: {
+        foo: { type: "string" },
+      },
+    };
+    const registry = registryWith(
+      "orders.create",
+      async () => "ok",
+      {
+        overrides: { inputSchema: overrideSchema, policy: { confirmationPolicy: "none" } },
+      },
+    );
+    const runtime = new CapabilityRuntime({ manifest, registry });
+    const result = await runtime.execute(
+      {
+        capabilityId: "orders.create",
+        input: {},
+      },
+      {},
+    );
+    expect(result.status).toBe("success");
+  });
+
+  it("leaves manifest value when authored override missing", async () => {
+    const registry = registryWith("orders.create", async () => "ok", {
+      overrides: { inputSchema: manifest.capabilities[0].inputSchema },
+    });
+    const runtime = new CapabilityRuntime({ manifest, registry });
+    const result = await runtime.execute(createRequest({})); // missing required orderId
+    expect(result.status).toBe("error");
+    expect(result.error?.code).toBe("INVALID_INPUT");
+  });
+
+  it("applies metadata overrides without changing manifest policy", async () => {
+    const registry = registryWith("orders.create", async () => "ok", {
+      overrides: {
+        metadata: { foo: "bar" },
+      },
+    });
+    const runtime = new CapabilityRuntime({ manifest, registry });
+
+    const internalCapability = (runtime as unknown as { capabilityMap: Map<string, AiCapability> }).capabilityMap.get("orders.create");
+    expect(internalCapability?.metadata?.foo).toBe("bar");
+
+    const result = await runtime.execute(createRequest({ orderId: "123" }));
+    expect(result.status).toBe("pending"); // confirmation still required per manifest
+    expect(result.error?.code).toBe("POLICY_CONFIRMATION_REQUIRED");
   });
 });

@@ -111,6 +111,7 @@ async function main() {
     createAiCapabilitiesMiddleware({
       runtime,
       manifest,
+      publicManifest: manifest,
       mode: "public",
     }),
   );

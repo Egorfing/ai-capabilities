@@ -7,7 +7,7 @@ Detect signals → Run doctor/inspect/extract/detect-llm → Summarize → Ask m
 ```
 
 ## When to trigger this workflow
-- Repository contains React Query hooks, OpenAPI specs, API clients, or backend service modules.
+- Repository contains React Query hooks, OpenAPI/Swagger specs, API clients, or backend service modules.
 - There is an existing chat UI or server-side agent entry point that should gain real actions.
 - Navigation/UI flows (router, modal manager, form handlers) need to be exposed to an AI agent.
 - `package.json` already references `openai`, `anthropic`, `ai`, `@vercel/ai`, `langchain`, `llm`, or similar dependencies.
@@ -24,7 +24,7 @@ Record:
 - Capability counts (total, read, mutation, navigation/UI).
 - Risk distribution (safe/low/medium vs. high/critical).
 - Empty schemas, diagnostics, or “unbound” capabilities reported by doctor.
-- Existing authored capabilities under `src/ai-capabilities/**/*`.
+- Existing authored capabilities under `src/app-capabilities/**/*`.
 - Detected AI stacks (LLM client dependencies, chat components, server endpoints).
 
 ## Phase 2 — Summarize
@@ -33,7 +33,7 @@ Before asking any questions, send a snapshot that includes:
 - Safe reads vs. safe mutations vs. destructive items.
 - IDs lacking schemas or bindings.
 - Whether manifests (`output/ai-capabilities*.json`) are fresh.
-- Whether `src/ai-capabilities/capabilities`, `registry.ts`, `auto/`, or runtime helpers already exist.
+- Whether `src/app-capabilities/capabilities`, `registry.ts`, `auto/`, or runtime helpers already exist.
 - AI stack findings from `detect-llm` (e.g., “Vercel AI SDK detected in src/components/Chat.tsx”).
 
 ## Phase 3 — Ask only what you cannot infer
@@ -47,21 +47,21 @@ Keep the questionnaire short and specific:
 ## Phase 4 — Generate bindings
 1. **Auto-bind safe reads/creates**
    ```bash
-   npx ai-capabilities auto-bind --manifest ./output/ai-capabilities.json --dir ./src/ai-capabilities/auto
+   npx ai-capabilities auto-bind --manifest ./output/ai-capabilities.json --dir ./src/app-capabilities/auto
    ```
    - Use `--dry-run` to preview what will happen.
-   - Review the generated files under `src/ai-capabilities/auto/*.ts`.
+   - Review the generated files under `src/app-capabilities/auto/*.ts`.
 2. **Scaffold the remaining capabilities**
    ```bash
-   npx ai-capabilities scaffold --id hook.some-mutation --dir ./src/ai-capabilities/capabilities
+   npx ai-capabilities scaffold --id hook.some-mutation --dir ./src/app-capabilities/capabilities
    ```
 3. **Implement handlers**
    - Use `defineCapabilityFromExtracted` for extracted hooks (backend/service actions).
    - Use `defineCapability` for pure UI/navigation helpers.
    - Copy metadata, fill aliases/example intents, and set conservative policies (`visibility: "internal"`, `riskLevel: "low"` for reads, `riskLevel: "medium"` for safe mutations).
 4. **Register everything**
-   - Update `src/ai-capabilities/registry.ts` (or equivalent) to include auto-bound and scaffolded exports.
-   - Ensure runtime creators (usually `src/ai-capabilities/index.ts` or `src/agent/runtime.ts`) call `registerCapabilityDefinitions`.
+   - Update `src/app-capabilities/registry.ts` (or equivalent) to include auto-bound and scaffolded exports.
+   - Ensure runtime creators (usually `src/app-capabilities/index.ts` or `src/agent/runtime.ts`) call `registerCapabilityDefinitions`.
 
 ### Backend path checklist
 - Implement handlers by calling API clients/services (e.g., `projectApi.list()`).
@@ -86,7 +86,7 @@ Keep the questionnaire short and specific:
 
 ## Phase 6 — Final summary
 Your hand-off should always include:
-- **Files:** Paths + short intent (e.g., ``src/ai-capabilities/auto/projectsCapability.ts` — auto-bound read``).
+- **Files:** Paths + short intent (e.g., ``src/app-capabilities/auto/projectsCapability.ts` — auto-bound read``).
 - **Commands:** `npm run dev`, `npx ai-capabilities doctor`, `npx ai-capabilities auto-bind --dry-run`, etc.
 - **Testing instructions:** How to trigger the new capabilities (chat prompt, runtime call, CLI).
 - **Next steps:** e.g., “enrich metadata”, “publish `.well-known`”, “add confirmation policies for mutations”.

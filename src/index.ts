@@ -53,3 +53,14 @@ export type {
   CapabilityExecutionResult,
   CapabilityExecutionRequest,
 } from "./types/index.js";
+export {
+  loadManifest,
+  resolveManifestSources,
+} from "./manifest/manifest-loader.js";
+export type {
+  ManifestLoaderOptions,
+  ManifestLoadResult,
+  ManifestSourcePlan,
+  ManifestLoaderLogger,
+  ManifestVisibility,
+} from "./manifest/manifest-loader.js";

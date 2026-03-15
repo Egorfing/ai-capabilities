@@ -1,12 +1,12 @@
 # Demo walkthrough
 
-`fixtures/demo-app` — это пример React/TypeScript проекта, покрывающий OpenAPI, React Query, Router и Form паттерны.
+`fixtures/demo-app` — это пример React/TypeScript проекта, покрывающий OpenAPI (3.x), React Query, Router и Form паттерны.
 
 Перед запуском остальных шагов выполните:
 ```bash
 npx ai-capabilities init
 ```
-Команда создаст стартовый `ai-capabilities.config.json` и папку `src/ai-capabilities/` с registry + example capability, которые можно адаптировать под demo или свой проект.
+Команда создаст стартовый `ai-capabilities.config.json` и папку `src/app-capabilities/` с registry + example capability, которые можно адаптировать под demo или свой проект.
 Определения используют `defineCapability`, поэтому переносить код между демо и реальным приложением просто (см. [define-capability.md](./define-capability.md)) и дополнительно [frontend-actions.md](./frontend-actions.md) для UI/навигационных кейсов.
 
 ## Быстрый сценарий
@@ -49,7 +49,7 @@ npx ai-capabilities init
 Если хотите увидеть полный UI-поток, изучите [examples/react-app](../examples/react-app) и [docs/happy-path.md](./happy-path.md).
 
 ## Что смотреть в коде
-- `fixtures/demo-app/openapi.json` — OpenAPI spec.
+- `fixtures/demo-app/openapi.json` — OpenAPI spec (Swagger 2.0 fixtures live in `fixtures/swagger/`).
 - `fixtures/demo-app/src/hooks` — React Query extractors.
 - `fixtures/demo-app/src/router` — маршруты → navigation capabilities.
 - `fixtures/golden/demo-app` — эталонные артефакты для regression tests.

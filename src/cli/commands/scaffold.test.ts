@@ -94,7 +94,7 @@ describe("scaffold CLI command", () => {
       flags: {
         id: "hook.create-project-mutation",
         manifest: manifestPath,
-        dir: path.join(workspace.dir, "src/ai-capabilities/capabilities"),
+        dir: path.join(workspace.dir, "src/app-capabilities/capabilities"),
       },
       positional: [],
     };
@@ -103,7 +103,7 @@ describe("scaffold CLI command", () => {
 
     const generatedPath = path.join(
       workspace.dir,
-      "src/ai-capabilities/capabilities",
+      "src/app-capabilities/capabilities",
       "createProjectCapability.ts",
     );
     const content = await readFile(generatedPath, "utf-8");
@@ -228,7 +228,7 @@ describe("scaffold CLI command", () => {
       command: "scaffold",
       flags: {
         manifest: manifestPath,
-        dir: path.join(workspace.dir, "src/ai-capabilities/capabilities"),
+        dir: path.join(workspace.dir, "src/app-capabilities/capabilities"),
       },
       positional: [],
     };
@@ -237,7 +237,7 @@ describe("scaffold CLI command", () => {
 
     const generatedPath = path.join(
       workspace.dir,
-      "src/ai-capabilities/capabilities",
+      "src/app-capabilities/capabilities",
       "projectsCapability.ts",
     );
     const generated = await readFile(generatedPath, "utf-8");
