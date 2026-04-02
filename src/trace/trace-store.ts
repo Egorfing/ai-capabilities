@@ -3,11 +3,13 @@
 // ---------------------------------------------------------------------------
 
 function joinPath(...segments: Array<string | undefined>): string {
-  return segments
-    .filter((segment): segment is string => Boolean(segment))
-    .map((segment) => segment!.replace(/(^\/+|\/+$)/g, ""))
+  const filtered = segments.filter((s): s is string => Boolean(s));
+  const startsWithSlash = filtered[0]?.startsWith("/") ?? false;
+  const joined = filtered
+    .map((s) => s.replace(/(^\/+|\/+$)/g, ""))
     .join("/")
     .replace(/\/\/+/g, "/");
+  return startsWithSlash ? `/${joined}` : joined;
 }
 
 /**

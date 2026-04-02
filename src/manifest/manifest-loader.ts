@@ -157,11 +157,16 @@ async function loadRemoteManifest(
     }
   }
 
+  const MAX_MANIFEST_SIZE = 5 * 1024 * 1024; // 5MB
   const response = await fetchImpl(source.detail, {
     headers: { Accept: "application/json" },
   });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  const contentLength = Number(response.headers.get("content-length") || 0);
+  if (contentLength > MAX_MANIFEST_SIZE) {
+    throw new Error(`Remote manifest too large: ${contentLength} bytes (max ${MAX_MANIFEST_SIZE})`);
   }
   const body = await response.json();
   const manifest = normalizeManifestShape(body);

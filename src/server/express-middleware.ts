@@ -9,6 +9,8 @@ import type { AiCapabilitiesManifest, CapabilityExecutionSpec, CapabilitySource 
 import type { CapabilityRuntimeInterface, ExecutionMode } from "../runtime/runtime-types.js";
 
 const DEFAULT_JSON_LIMIT = 1_000_000; // ~1MB
+const DEFAULT_RATE_LIMIT_MAX = 60; // requests per window
+const DEFAULT_RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
 
 type ManifestProvider = () => Promise<AiCapabilitiesManifest>;
 
@@ -47,6 +49,13 @@ interface NormalizedMiddlewareOptions {
   allowUnsafePublicFallback: boolean;
 }
 
+export interface RateLimitConfig {
+  /** Maximum requests per window. Default: 60. */
+  max?: number;
+  /** Window duration in milliseconds. Default: 60 000 (1 min). */
+  windowMs?: number;
+}
+
 export interface AiCapabilitiesMiddlewareOptions {
   runtime: CapabilityRuntimeInterface;
   manifest?: AiCapabilitiesManifest;
@@ -57,12 +66,73 @@ export interface AiCapabilitiesMiddlewareOptions {
   jsonBodyLimit?: number;
   logger?: Logger;
   allowUnsafePublicFallback?: boolean;
+  /** Rate limiting for the /execute endpoint. Set `false` to disable. Default: enabled (60 req/min per IP). */
+  rateLimit?: RateLimitConfig | false;
 }
 
 type MatchedRoute = "wellKnown" | "execute" | "capabilities";
 
+// ---------------------------------------------------------------------------
+// Simple in-memory sliding-window rate limiter (no external dependencies)
+// ---------------------------------------------------------------------------
+class SlidingWindowRateLimiter {
+  private readonly max: number;
+  private readonly windowMs: number;
+  private readonly hits = new Map<string, number[]>();
+  private cleanupTimer: ReturnType<typeof setInterval>;
+
+  constructor(max: number, windowMs: number) {
+    this.max = max;
+    this.windowMs = windowMs;
+    // Periodic cleanup every 2 minutes to prevent memory leaks from stale IPs
+    this.cleanupTimer = setInterval(() => this.cleanup(), 120_000);
+    if (this.cleanupTimer.unref) this.cleanupTimer.unref();
+  }
+
+  /** Returns true if the request is allowed, false if rate-limited. */
+  check(ip: string): boolean {
+    const now = Date.now();
+    const cutoff = now - this.windowMs;
+    let timestamps = this.hits.get(ip);
+    if (timestamps) {
+      timestamps = timestamps.filter((t) => t > cutoff);
+    } else {
+      timestamps = [];
+    }
+    if (timestamps.length >= this.max) {
+      this.hits.set(ip, timestamps);
+      return false;
+    }
+    timestamps.push(now);
+    this.hits.set(ip, timestamps);
+    return true;
+  }
+
+  private cleanup(): void {
+    const cutoff = Date.now() - this.windowMs;
+    for (const [ip, timestamps] of this.hits) {
+      const alive = timestamps.filter((t) => t > cutoff);
+      if (alive.length === 0) {
+        this.hits.delete(ip);
+      } else {
+        this.hits.set(ip, alive);
+      }
+    }
+  }
+}
+
 export function createAiCapabilitiesMiddleware(options: AiCapabilitiesMiddlewareOptions): ExpressRequestHandler {
   const normalized = normalizeOptions(options);
+
+  // Rate limiter for /execute (opt-out with rateLimit: false)
+  let rateLimiter: SlidingWindowRateLimiter | null = null;
+  if (options.rateLimit !== false) {
+    const cfg = typeof options.rateLimit === "object" ? options.rateLimit : {};
+    rateLimiter = new SlidingWindowRateLimiter(
+      cfg.max ?? DEFAULT_RATE_LIMIT_MAX,
+      cfg.windowMs ?? DEFAULT_RATE_LIMIT_WINDOW_MS,
+    );
+  }
 
   const handler: ExpressRequestHandler = (req, res, next) => {
     const url = buildRequestUrl(req);
@@ -84,6 +154,13 @@ export function createAiCapabilitiesMiddleware(options: AiCapabilitiesMiddleware
             await handleCapabilities(res, url, normalized, manifest);
             break;
           case "execute":
+            if (rateLimiter) {
+              const ip = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim()
+                ?? req.socket?.remoteAddress ?? "unknown";
+              if (!rateLimiter.check(ip)) {
+                throw new HttpError(429, "RATE_LIMIT_EXCEEDED", "Too many requests. Please try again later.");
+              }
+            }
             await handleExecute(req, res, normalized, manifest);
             break;
           default:

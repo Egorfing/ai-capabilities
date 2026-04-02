@@ -18,7 +18,7 @@ AI Capabilities solves this by:
 - Automatic capability extraction from source code (OpenAPI / Swagger specs, React Query hooks, Router, Form).
 - Canonical capability manifests with schemas, metadata, and policy.
 - A capability runtime + policy layer that executes actions safely.
-- AI tool adapters (OpenAI, Anthropic, internal agents).
+- AI tool adapters (OpenAI, Anthropic, MCP, internal agents).
 - A discovery endpoint (`/.well-known/ai-capabilities.json`).
 
 See [docs/architecture.md](docs/architecture.md) for the full flow.
@@ -90,6 +90,40 @@ npx ai-capabilities
 The command prints capability counts, safe auto-bind candidates, high-risk operations, and recommended next steps so you know exactly what to do next.
 
 **Need to decide between an app-local runtime, HTTP runtime, or mixed visibility?** See [docs/mixed-scenarios.md](docs/mixed-scenarios.md) for a decision matrix that covers internal agents, public discovery, browser/Node consumers, env patterns, and fallback strategies.
+
+### Already have an OpenAPI / Swagger spec?
+
+If your project ships an OpenAPI 3.x or Swagger 2.0 spec, capabilities are extracted automatically — each endpoint becomes a callable capability with schemas, risk level, and metadata.
+
+**3 steps to go from spec to capabilities:**
+
+```bash
+# 1. Point the config at your spec (or skip — standard filenames are auto-discovered)
+cat > ai-capabilities.config.json <<'EOF'
+{
+  "extractors": {
+    "openapi": { "spec": "path/to/openapi.json" }
+  }
+}
+EOF
+
+# 2. Extract — every endpoint becomes a capability in the manifest
+npx ai-capabilities extract
+
+# 3. See which endpoints are safe to auto-scaffold
+npx ai-capabilities auto-bind --dry-run
+```
+
+Each endpoint yields a capability with:
+- **ID** from `operationId` (or tag + path fallback)
+- **inputSchema** merged from query/path params and request body
+- **outputSchema** from the first 2xx response
+- **Kind**: `read` for GET, `mutation` for POST/PUT/PATCH/DELETE
+- **Risk classification**: safe reads auto-bind; destructive operations (delete, wipe) are flagged
+
+> **Auto-discovery:** if your spec lives in the project root under a standard name (`openapi.json`, `openapi.yaml`, `swagger.json`, `swagger.yaml`), no config is needed — the extractor finds it automatically.
+
+Full extractor details → [docs/extraction.md](docs/extraction.md)
 
 ### Public manifest snapshot
 
@@ -209,6 +243,66 @@ The example includes:
 
 Use it alongside [docs/happy-path.md](docs/happy-path.md) and [docs/file-structure.md](docs/file-structure.md) to copy the pattern into your app.
 
+## MCP compatibility
+
+[Model Context Protocol (MCP)](https://modelcontextprotocol.io) lets AI agents discover and call tools exposed by servers. AI Capabilities works as a **capability layer on top of MCP** — extract actions from your code, add policy and risk metadata, then export them as MCP tools with **zero manual tool definitions**.
+
+### Try the MCP server (30 seconds)
+
+The Express example includes a ready-to-run MCP server with 7 capabilities (orders, projects, todos):
+
+```bash
+cd examples/express-app
+npm install
+npx @modelcontextprotocol/inspector npx tsx mcp-server.ts
+```
+
+This opens the MCP Inspector — a browser UI where you can list tools, call them interactively, and see results. No API keys needed.
+
+### Connect to Claude Desktop
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "ai-capabilities-demo": {
+      "command": "npx",
+      "args": ["tsx", "/absolute/path/to/examples/express-app/mcp-server.ts"]
+    }
+  }
+}
+```
+
+Claude will discover all capabilities automatically and can create projects, add todos, query orders — all through natural language.
+
+### How it works
+
+```ts
+import { buildMcpTools, CapabilityRuntime } from "ai-capabilities";
+import manifest from "./output/ai-capabilities.public.json";
+
+const tools = buildMcpTools(manifest);
+// → [{ name: "api_orders_list_orders", description: "...", inputSchema: {...} }, ...]
+
+// Register with any MCP server framework:
+for (const tool of tools) {
+  mcpServer.addTool(tool.name, tool.inputSchema, async (input) => {
+    return runtime.execute({ capabilityId: tool.capabilityId, input });
+  });
+}
+```
+
+See [examples/express-app/mcp-server.ts](examples/express-app/mcp-server.ts) for the complete working implementation (~90 lines).
+
+**Why use ai-capabilities with MCP?**
+- **Zero manual tool definitions**: extract capabilities from OpenAPI specs, React hooks, and routes — `buildMcpTools()` converts them to MCP format automatically
+- **Policy layer**: visibility, risk levels, and confirmation policies travel with every tool
+- **Unified surface**: backend APIs and frontend UI actions are exposed through the same manifest
+- **Adapters**: switch between MCP, OpenAI function calling, or Anthropic tool use without changing capability code
+
+See [docs/adapters.md](docs/adapters.md) for all available tool format adapters.
+
 ## Discovery standard
 AI Capabilities formalizes a discovery contract for applications: serve a curated `/.well-known/ai-capabilities.json` (filtered to public visibility) so external agents can learn what your app can do. Think of it as `robots.txt + sitemap.xml + openapi.json` for AI-executable actions—agents fetch it to inspect capability IDs, schemas, and policies before calling your runtime. Keep destructive/internal actions out of this surface (leave them `internal`/`hidden`) so the well-known endpoint remains a safe bridge between your application and AI tools. See [docs/external-agents.md](docs/external-agents.md) and [docs/standardization.md](docs/standardization.md) for the full playbook.
 
@@ -264,9 +358,10 @@ The middleware automatically wires:
 
 Check out [examples/express-app](examples/express-app) for a runnable sample that:
 
-1. Registers a safe read capability (`api.orders.list-orders`) with fake order data.
-2. Mounts the middleware in public mode.
-3. Uses the client SDK to discover capabilities and execute the read operation.
+1. Registers 7 capabilities (orders CRUD, projects CRUD, todos CRUD) with in-memory data.
+2. Mounts the middleware in public mode with a chat UI powered by any LLM.
+3. Includes an MCP stdio server (`mcp-server.ts`) for Claude Desktop / Cursor integration.
+4. Uses the client SDK to discover capabilities and execute operations.
 
 Docs: [docs/server.md](docs/server.md#express--node-middleware).
 

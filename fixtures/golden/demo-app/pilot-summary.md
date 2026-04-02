@@ -11,7 +11,7 @@
 
 - Total capabilities: 16
 - Public capabilities: 2
-- Diagnostics — errors: 0, warnings: 0, info: 6
+- Diagnostics — errors: 0, warnings: 0, info: 7
 
 ## Extractors
 

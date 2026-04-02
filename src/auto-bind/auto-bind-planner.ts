@@ -1,6 +1,6 @@
 import type { AiCapabilitiesManifest, AiCapability, CapabilityPolicy } from "../types/index.js";
 
-const DESTRUCTIVE_PATTERN = /(delete|remove|drop|destroy|wipe|reset|terminate)/i;
+const DESTRUCTIVE_PATTERN = /\b(delete|remove|drop|destroy|wipe|reset|terminate)\b/i;
 const CREATE_UPDATE_PATTERN = /(create|add|update|set|sync|upsert)/i;
 const SAFE_READ_RISKS = new Set(["safe", "low"]);
 const SAFE_MUTATION_RISKS = new Set(["safe", "low", "medium"]);

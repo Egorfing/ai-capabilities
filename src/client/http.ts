@@ -80,6 +80,13 @@ export function ensureSuccessEnvelope<T>(
   );
 }
 
+/**
+ * Resolve a capability endpoint URL from a base URL and path.
+ *
+ * **Security note:** `baseUrl` must be a trusted origin controlled by
+ * your application. Never pass user-supplied or untrusted URLs as `baseUrl`
+ * — doing so may enable Server-Side Request Forgery (SSRF).
+ */
 export function resolveEndpoint(baseUrl: string, path: string): string {
   try {
     return new URL(path, baseUrl).toString();

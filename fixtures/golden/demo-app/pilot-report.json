@@ -9,7 +9,7 @@
     "capabilitiesTotal": 16,
     "publicCapabilities": 2,
     "diagnostics": {
-      "info": 6,
+      "info": 7,
       "warning": 0,
       "error": 0
     }
@@ -67,9 +67,9 @@
   },
   "unsupportedPatterns": [],
   "diagnosticsSummary": {
-    "total": 6,
+    "total": 7,
     "errors": 0,
     "warnings": 0,
-    "infos": 6
+    "infos": 7
   }
 }

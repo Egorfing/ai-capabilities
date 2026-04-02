@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'" />
+  <title>Express AI Capabilities Demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent: #4f46e5;
+      --accent-hover: #4338ca;
+      --bg: #f8fafc;
+      --surface: #fff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.5rem;
+    }
+    header h1 { font-size: 1.25rem; font-weight: 700; }
+    header p { font-size: .85rem; color: var(--text-muted); margin-top: .25rem; }
+
+    main {
+      flex: 1;
+      max-width: 640px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+      padding-bottom: 1rem;
+    }
+
+    .bubble {
+      max-width: 85%;
+      padding: .75rem 1rem;
+      border-radius: var(--radius);
+      line-height: 1.5;
+      font-size: .9rem;
+      word-break: break-word;
+    }
+    .bubble--user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .bubble--assistant {
+      align-self: flex-start;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .bubble--error {
+      align-self: flex-start;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+    }
+
+    .result-card {
+      margin-top: .5rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .5rem .75rem;
+      font-size: .8rem;
+      font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+    .result-card summary {
+      cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .input-row {
+      display: flex;
+      gap: .5rem;
+      padding-top: .75rem;
+      border-top: 1px solid var(--border);
+    }
+    .input-row input {
+      flex: 1;
+      padding: .65rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: .9rem;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .input-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,70,229,.15); }
+    .input-row button {
+      padding: .65rem 1.25rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .input-row button:hover { background: var(--accent-hover); }
+    .input-row button:disabled { opacity: .5; cursor: not-allowed; }
+
+    .status {
+      text-align: center;
+      font-size: .8rem;
+      color: var(--text-muted);
+      padding: .5rem;
+    }
+
+    .examples {
+      margin-bottom: 1rem;
+      padding: .75rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .examples h3 { font-size: .85rem; color: var(--text-muted); margin-bottom: .5rem; }
+    .examples button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: .4rem .5rem;
+      margin-bottom: .25rem;
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      font-size: .85rem;
+      cursor: pointer;
+      color: var(--accent);
+      transition: background .15s;
+    }
+    .examples button:hover { background: #eef2ff; border-color: #c7d2fe; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Express AI Capabilities Demo</h1>
+  <p>Chat with the assistant to execute capabilities via an LLM.</p>
+</header>
+
+<main>
+  <div class="examples" id="examples">
+    <h3>Try these:</h3>
+    <button onclick="sendExample(this)">Show me all pending orders</button>
+    <button onclick="sendExample(this)">Create a project called Analytics</button>
+    <button onclick="sendExample(this)">Add a todo to Launchpad: Review launch copy</button>
+    <button onclick="sendExample(this)">List all projects with their todos</button>
+  </div>
+
+  <div class="messages" id="messages"></div>
+
+  <div class="input-row">
+    <input id="input" type="text" placeholder="Ask about orders, projects, or todos..." autocomplete="off"
+           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}" />
+    <button id="sendBtn" onclick="send()">Send</button>
+  </div>
+</main>
+
+<script>
+  const messagesEl = document.getElementById("messages");
+  const inputEl = document.getElementById("input");
+  const sendBtn = document.getElementById("sendBtn");
+  const examplesEl = document.getElementById("examples");
+  const history = [];
+
+  function addBubble(role, html) {
+    const div = document.createElement("div");
+    div.className = `bubble bubble--${role}`;
+    div.innerHTML = html;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return div;
+  }
+
+  function sendExample(btn) {
+    inputEl.value = btn.textContent;
+    examplesEl.style.display = "none";
+    send();
+  }
+
+  async function send() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+    inputEl.value = "";
+    sendBtn.disabled = true;
+    examplesEl.style.display = "none";
+
+    addBubble("user", escapeHtml(text));
+    history.push({ role: "user", content: text });
+
+    const thinking = addBubble("assistant", '<span class="status">Thinking...</span>');
+
+    try {
+      const res = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, history: history.slice(0, -1) }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        thinking.className = "bubble bubble--error";
+        thinking.textContent = data.error || `Error ${res.status}`;
+        return;
+      }
+
+      let html = escapeHtml(data.reply || "Done.");
+
+      if (data.results && data.results.length > 0) {
+        for (const r of data.results) {
+          const status = r.status === "success" ? "success" : "error";
+          const detail = r.data ? JSON.stringify(r.data, null, 2) : (r.error || "no data");
+          html += `<div class="result-card"><details><summary>${escapeHtml(r.capabilityId)} — ${status}</summary>\n${escapeHtml(detail)}</details></div>`;
+        }
+      }
+
+      thinking.innerHTML = html;
+      history.push({ role: "assistant", content: data.reply || "" });
+    } catch (err) {
+      thinking.className = "bubble bubble--error";
+      thinking.textContent = err.message;
+    } finally {
+      sendBtn.disabled = false;
+      inputEl.focus();
+    }
+  }
+
+  function escapeHtml(str) {
+    const el = document.createElement("span");
+    el.textContent = str;
+    return el.innerHTML;
+  }
+</script>
+
+</body>
+</html>

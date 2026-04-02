@@ -1,15 +1,29 @@
-import { readdirSync, statSync } from "node:fs";
+import { readdirSync, lstatSync, realpathSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const SKIP_DIRS = new Set(["node_modules", "dist", "build", ".git", ".next", "__tests__"]);
+const MAX_WALK_DEPTH = 30;
 
 export function discoverProjectTsFiles(rootDir: string): string[] {
   const results: string[] = [];
-  walk(rootDir, results);
+  const visited = new Set<string>();
+  walk(rootDir, results, visited, 0);
   return results;
 }
 
-function walk(dir: string, results: string[]): void {
+function walk(dir: string, results: string[], visited: Set<string>, depth: number): void {
+  if (depth > MAX_WALK_DEPTH) return;
+
+  // Resolve real path to detect symlink cycles
+  let realDir: string;
+  try {
+    realDir = realpathSync(dir);
+  } catch {
+    return;
+  }
+  if (visited.has(realDir)) return;
+  visited.add(realDir);
+
   let entries: string[];
   try {
     entries = readdirSync(dir);
@@ -22,12 +36,14 @@ function walk(dir: string, results: string[]): void {
     const full = join(dir, entry);
     let stat;
     try {
-      stat = statSync(full);
+      stat = lstatSync(full);
     } catch {
       continue;
     }
+    // Skip symlinks to avoid traversal attacks and infinite loops
+    if (stat.isSymbolicLink()) continue;
     if (stat.isDirectory()) {
-      walk(full, results);
+      walk(full, results, visited, depth + 1);
     } else if (/\.(ts|tsx)$/.test(entry) && !entry.endsWith(".d.ts")) {
       results.push(full);
     }

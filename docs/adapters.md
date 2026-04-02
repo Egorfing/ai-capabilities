@@ -17,6 +17,7 @@ Adapters convert `AiCapabilitiesManifest` entries into formats expected by speci
 | OpenAI | `buildOpenAITools` | `[{ type: "function", function: { name, description, parameters }}]` | Normalizes `name` (dots → `_`); `parameters` is straight JSON Schema. |
 | Anthropic | `buildAnthropicTools` | `{ name, description, input_schema }[]` | Ensures snake_case naming and carries `displayTitle` into the description. |
 | Internal | `buildInternalTools` | `{ id, capabilityId, summary, schema }[]` | Summary includes risk/confirmation hints; used by the internal planner/runtime. |
+| MCP | `buildMcpTools` | `{ name, description, inputSchema }[]` | [Model Context Protocol](https://modelcontextprotocol.io) compatible; register tools with any MCP server framework. |
 | Mock | `buildMockTools` | `{ name: "mock_...", capabilityId, schema }[]` | Handy for testing UI/tool pickers. |
 
 ## Example (OpenAI)

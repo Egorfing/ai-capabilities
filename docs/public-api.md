@@ -28,6 +28,14 @@ import {
 - `CapabilityRuntimeExecuteOptions.handlerContext` carries typed adapters (router/ui/notify) described in `CapabilityHelperContext`.
 - Policy helpers: `evaluatePolicy`, `resolvePolicy`, `visibilityRule`, `permissionScopeRule`, `destructiveRule`, `confirmationRule`, `defaultPolicyRules`.
 
+## Version
+- `VERSION` — library version string (reads from `package.json` at runtime, single source of truth).
+
+## Manifest loading
+- `loadManifest(options)` — loads a capability manifest from remote URL, local file, or both with fallback. Supports caching, visibility checks, and custom fetch implementations.
+- `resolveManifestSources(options)` — returns the ordered list of sources `loadManifest` will try, useful for diagnostics and debugging.
+- Types: `ManifestLoaderOptions`, `ManifestLoadResult`, `ManifestSourcePlan`, `ManifestLoaderLogger`, `ManifestVisibility`.
+
 ## Types for manifests + requests
 - Capability definition types: `CapabilityDefinitionInput`, `DefinedCapability`, `CapabilityExecutor`, `CapabilityPolicyDefinition`, `CapabilityHelperContext`, `CapabilityRouterAdapter`, `CapabilityUIAdapter`, `CapabilityNotifyAdapter`.
   - When starting from extracted hooks, use `ExtractedCapabilityDefinitionInput` with `defineCapabilityFromExtracted`.
@@ -78,7 +86,7 @@ import {
 
 - `createServer(deps, options?)` — low-level HTTP server used by `npx ai-capabilities serve` (exposes `/health`, `/capabilities`, `/execute`, `/traces`, `/.well-known`).
 - `startServer(createServer(...))` — convenience wrapper for CLI commands.
-- `createAiCapabilitiesMiddleware(options)` — Express-compatible middleware that exposes the same endpoints directly inside an existing app. Supports `runtime`, `manifest`/`manifestProvider`, optional `publicManifest`, `mode`, `basePath`, `jsonBodyLimit`, and custom loggers.
-- `AiCapabilitiesMiddlewareOptions` — option type for the middleware helper.
+- `createAiCapabilitiesMiddleware(options)` — Express-compatible middleware that exposes the same endpoints directly inside an existing app. Supports `runtime`, `manifest`/`manifestProvider`, optional `publicManifest`, `mode`, `basePath`, `jsonBodyLimit`, `rateLimit`, and custom loggers. Rate limiting is enabled by default (60 req/min per IP) and can be disabled with `rateLimit: false`.
+- `AiCapabilitiesMiddlewareOptions`, `RateLimitConfig` — option types for the middleware helper.
 
 Import from this entrypoint instead of deep paths so the surface stays versioned and testable.

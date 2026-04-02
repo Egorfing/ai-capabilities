@@ -111,7 +111,7 @@ function buildCapabilityFileIndex(cwd: string): Map<string, CapabilityFileEntry>
     while ((match = idPattern.exec(content)) !== null) {
       const id = match[1];
       if (!id) continue;
-      const exportMatch = /export\\s+const\\s+(\\w+)/.exec(content);
+      const exportMatch = /export\s+const\s+(\w+)/.exec(content);
       index.set(id, {
         filePath: file,
         hasTodo,
@@ -155,7 +155,7 @@ function detectRuntimeUsage(cwd: string): boolean {
 function deriveScaffoldStatus(
   id: string,
   index: Map<string, CapabilityFileEntry>,
-  notes: string[],
+  _notes: string[],
 ): LifecycleFlag {
   if (!index.has(id)) return "no";
   return "yes";

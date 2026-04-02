@@ -1,5 +1,5 @@
 import { resolve, dirname } from "node:path";
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync, renameSync, unlinkSync } from "node:fs";
 import type { ParsedArgs } from "../parse-args.js";
 import { defaultRegistry, runPipeline } from "../../extractors/index.js";
 import type { RawCapabilityManifest } from "../../types/index.js";
@@ -13,6 +13,7 @@ import {
 import { mergeCapabilities } from "../../merge/merge-capabilities.js";
 import { buildAiCapabilitiesManifest } from "../../manifest/build-manifest.js";
 import { createTraceWriter } from "../../trace/index.js";
+import { VERSION } from "../../index.js";
 
 export const extractHelp = `
 Usage: capability-engine extract [options]
@@ -101,14 +102,13 @@ export async function executeExtractCommand(options: ExtractCommandOptions = {})
       generatedAt: new Date().toISOString(),
       sourceProject: projectPath,
       extractors: result.extractorsRun,
-      version: "0.2.1",
+      version: VERSION,
     },
     capabilities: mergeResult.capabilities,
   };
 
   const absOutput = finalConfig.output.raw;
-  mkdirSync(dirname(absOutput), { recursive: true });
-  writeFileSync(absOutput, JSON.stringify(manifest, null, 2) + "\n");
+  atomicWriteJson(absOutput, manifest);
 
   const { canonical, publicManifest } = buildAiCapabilitiesManifest({
     capabilities: mergeResult.capabilities,
@@ -116,12 +116,10 @@ export async function executeExtractCommand(options: ExtractCommandOptions = {})
   });
 
   const canonicalPath = finalConfig.output.canonical;
-  mkdirSync(dirname(canonicalPath), { recursive: true });
-  writeFileSync(canonicalPath, JSON.stringify(canonical, null, 2) + "\n");
+  atomicWriteJson(canonicalPath, canonical);
 
   const publicPath = finalConfig.output.public;
-  mkdirSync(dirname(publicPath), { recursive: true });
-  writeFileSync(publicPath, JSON.stringify(publicManifest, null, 2) + "\n");
+  atomicWriteJson(publicPath, publicManifest);
 
   const diagnosticsPath = finalConfig.output.diagnostics;
   writeDiagnosticsFile(result.diagnostics, diagnosticsPath);
@@ -149,4 +147,17 @@ export async function executeExtractCommand(options: ExtractCommandOptions = {})
     canonicalCount: mergeResult.capabilities.length,
     extractors: result.extractorsRun,
   };
+}
+
+/** Write JSON to file atomically: write to .tmp first, then rename. */
+function atomicWriteJson(filePath: string, data: unknown): void {
+  const tmp = `${filePath}.tmp`;
+  mkdirSync(dirname(filePath), { recursive: true });
+  try {
+    writeFileSync(tmp, JSON.stringify(data, null, 2) + "\n");
+    renameSync(tmp, filePath);
+  } catch (err) {
+    try { unlinkSync(tmp); } catch { /* ignore cleanup failure */ }
+    throw err;
+  }
 }

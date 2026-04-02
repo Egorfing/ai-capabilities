@@ -297,8 +297,18 @@ function extractJson(text: string): string {
 
 function resolveEndpoint(baseUrl: string): { endpoint: string; isOllama: boolean } {
   const trimmed = baseUrl.replace(/\/+$/, "");
-  const hasExplicitPath = /\/chat(?:\/completions)?$/i.test(trimmed);
-  const endpoint = hasExplicitPath ? trimmed : `${trimmed}/api/chat`;
-  const isOllama = endpoint.includes(":11434") || /\/api\/chat$/i.test(endpoint);
-  return { endpoint, isOllama };
+
+  // Explicit chat endpoint — use as-is
+  if (/\/chat(?:\/completions)?$/i.test(trimmed)) {
+    const isOllama = trimmed.includes(":11434") || /\/api\/chat$/i.test(trimmed);
+    return { endpoint: trimmed, isOllama };
+  }
+
+  // Looks like an OpenAI-compatible base URL (contains /v1, /v2, etc.)
+  if (/\/v\d+$/i.test(trimmed)) {
+    return { endpoint: `${trimmed}/chat/completions`, isOllama: false };
+  }
+
+  // Bare host — assume Ollama
+  return { endpoint: `${trimmed}/api/chat`, isOllama: true };
 }

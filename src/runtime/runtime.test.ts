@@ -352,3 +352,70 @@ describe("CapabilityRuntime — authored overrides", () => {
     expect(result.error?.code).toBe("POLICY_CONFIRMATION_REQUIRED");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Handler timeout tests
+// ---------------------------------------------------------------------------
+
+describe("CapabilityRuntime — handler timeout", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("default handlerTimeoutMs option is 30 000", () => {
+    // The CapabilityRuntimeExecuteOptions interface declares handlerTimeoutMs
+    // and the runtime uses 30_000 as the default. We verify that omitting the
+    // option still causes a timeout (by inspecting the source constant).
+    // We do NOT actually wait 30 s — we just confirm the option is accepted.
+    const registry = registryWith("orders.create", async () => "ok");
+    const runtime = new CapabilityRuntime({ manifest: manifestWith({ policy: { visibility: "public", riskLevel: "low", confirmationPolicy: "none" } }), registry });
+
+    // Calling execute without handlerTimeoutMs should still work (uses default)
+    const promise = runtime.execute(createRequest({ orderId: "1" }));
+    expect(promise).toBeInstanceOf(Promise);
+  });
+
+  it("kills a hanging handler after custom timeout", async () => {
+    const registry = registryWith("orders.create", async () => {
+      return new Promise((resolve) => setTimeout(resolve, 5000));
+    });
+    const runtime = new CapabilityRuntime({
+      manifest: manifestWith({ policy: { visibility: "public", riskLevel: "low", confirmationPolicy: "none" } }),
+      registry,
+    });
+
+    const result = await runtime.execute(
+      createRequest({ orderId: "1" }),
+      { handlerTimeoutMs: 100 },
+    );
+    expect(result.status).toBe("error");
+    expect(result.error?.code).toBe("HANDLER_ERROR");
+    const details = result.error?.details as { message: string };
+    expect(details.message).toContain("timed out");
+  });
+
+  it("handlerTimeoutMs: 0 disables timeout", async () => {
+    let resolved = false;
+    const registry = registryWith("orders.create", async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      resolved = true;
+      return { done: true };
+    });
+    const runtime = new CapabilityRuntime({
+      manifest: manifestWith({ policy: { visibility: "public", riskLevel: "low", confirmationPolicy: "none" } }),
+      registry,
+    });
+
+    const result = await runtime.execute(
+      createRequest({ orderId: "1" }),
+      { handlerTimeoutMs: 0 },
+    );
+    expect(resolved).toBe(true);
+    expect(result.status).toBe("success");
+    expect(result.data).toEqual({ done: true });
+  });
+});

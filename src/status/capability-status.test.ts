@@ -27,7 +27,7 @@ describe("analyzeCapabilityStatus", () => {
       scaffolded: "no",
       authored: "unknown",
       registered: "no",
-      executable: "no",
+      executable: "unknown",
     });
   });
 });

@@ -35,7 +35,12 @@ export function mapExecutionResult(result: CapabilityExecutionResult): RouteResu
 
 function sanitizeDetails(code: string, details: unknown): JsonValue | undefined {
   if (details === undefined) return undefined;
+  // In production, hide implementation details for all error types except validation errors
+  const isProduction = process.env.NODE_ENV === "production";
   if (code === "HANDLER_ERROR") {
+    return undefined;
+  }
+  if (isProduction && code !== "INVALID_INPUT" && code !== "INVALID_REQUEST") {
     return undefined;
   }
   return details as JsonValue;

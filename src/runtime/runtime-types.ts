@@ -21,6 +21,8 @@ export interface CapabilityRuntimeExecuteOptions {
   allowDestructive?: boolean;
   /** Optional context passed through to the registered handler (e.g. router/ui adapters). */
   handlerContext?: CapabilityHandlerContext;
+  /** Handler execution timeout in milliseconds. Default: 30 000 (30s). Set 0 to disable. */
+  handlerTimeoutMs?: number;
 }
 
 export interface CapabilityRuntimeInterface {

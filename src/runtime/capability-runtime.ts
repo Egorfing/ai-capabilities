@@ -172,7 +172,23 @@ export class CapabilityRuntime {
     }
 
     try {
-      const data = await handler(input, options.handlerContext);
+      const DEFAULT_HANDLER_TIMEOUT_MS = 30_000;
+      const timeoutMs = options.handlerTimeoutMs ?? DEFAULT_HANDLER_TIMEOUT_MS;
+      let data: unknown;
+      if (timeoutMs > 0) {
+        let timer: ReturnType<typeof setTimeout>;
+        data = await Promise.race([
+          handler(input, options.handlerContext),
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(
+              () => reject(new Error(`Handler timed out after ${timeoutMs}ms`)),
+              timeoutMs,
+            );
+          }),
+        ]).finally(() => clearTimeout(timer!));
+      } else {
+        data = await handler(input, options.handlerContext);
+      }
       const result = this.buildSuccess(request, data, start);
       if (tw) {
         await tw.write(runtimeEvent(traceId, "execution.success", `Execution succeeded for "${capability.id}"`, {

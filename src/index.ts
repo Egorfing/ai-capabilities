@@ -1,5 +1,9 @@
 // Capability Engine — main entry point
-export const VERSION = "0.2.1";
+import { createRequire } from "node:module";
+const _require = createRequire(import.meta.url);
+const _pkg = _require("../package.json") as { version: string };
+/** Library version — single source of truth is package.json */
+export const VERSION: string = _pkg.version;
 
 export {
   defineCapability,
@@ -64,3 +68,11 @@ export type {
   ManifestLoaderLogger,
   ManifestVisibility,
 } from "./manifest/manifest-loader.js";
+export { buildOpenAITools } from "./adapters/model-tools/openai.js";
+export type { OpenAITool } from "./adapters/model-tools/openai.js";
+export { buildAnthropicTools } from "./adapters/model-tools/anthropic.js";
+export type { AnthropicTool } from "./adapters/model-tools/anthropic.js";
+export { buildMcpTools } from "./adapters/model-tools/mcp.js";
+export type { McpTool } from "./adapters/model-tools/mcp.js";
+export { buildModelToolDefinitions } from "./adapters/model-tools/base.js";
+export type { BuildToolOptions } from "./adapters/model-tools/base.js";

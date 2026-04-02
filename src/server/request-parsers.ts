@@ -89,9 +89,13 @@ export function parseExecutePayload(body: unknown): ExecutePayload {
     throw new HttpError(400, "INVALID_REQUEST", "Request body must be an object");
   }
 
+  const MAX_CAPABILITY_ID_LENGTH = 256;
   const capabilityId = body.capabilityId;
   if (typeof capabilityId !== "string" || capabilityId.trim().length === 0) {
     throw new HttpError(400, "INVALID_REQUEST", "capabilityId is required");
+  }
+  if (capabilityId.trim().length > MAX_CAPABILITY_ID_LENGTH) {
+    throw new HttpError(400, "INVALID_REQUEST", `capabilityId exceeds maximum length of ${MAX_CAPABILITY_ID_LENGTH}`);
   }
 
   const inputRaw = body.input;

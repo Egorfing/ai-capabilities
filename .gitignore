@@ -2,5 +2,8 @@ node_modules/
 dist/
 output/*.json
 output/*.jsonl
+output/traces/
 *.tsbuildinfo
 .env
+var/
+Users/
